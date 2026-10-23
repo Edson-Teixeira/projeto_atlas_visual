@@ -334,7 +334,7 @@
                                 {% if log.status == 'sucesso' %}
                                     <span class="metric-badge badge-success" style="font-size: 10px;">Sucesso</span>
                                 {% else %}
-                                    <span class="metric-badge badge-danger" style="font-size: 10px;" title="{{ log.mensagem }}">Erro</span>
+                                    <span class="metric-badge badge-danger" style="font-size: 10px;" title="{{ log.mensagem | safe_err }}">Erro</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -361,9 +361,11 @@
                         Tipos de Serviço & Valores
                     </h3>
                     <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                        <span class="metric-badge badge-neutral" style="font-size: 11px; font-family: monospace;">
+                        {% if user and user.is_admin %}
+                        <span class="metric-badge badge-neutral" style="font-size: 11px; font-family: monospace;" title="Tabela física do banco">
                             {{ table_val or 'tabela_valores' }}
                         </span>
+                        {% endif %}
                         <span style="font-size: 12px; color: var(--text-muted);">
                             {{ servicos|length }} serviços cadastrados
                         </span>
@@ -694,7 +696,7 @@
                         {% if log.status == 'sucesso' %}
                             <span class="metric-badge badge-success">Sucesso</span>
                         {% else %}
-                            <span class="metric-badge badge-danger" title="{{ log.mensagem }}">Erro</span>
+                            <span class="metric-badge badge-danger" title="{{ log.mensagem | safe_err }}">Erro</span>
                         {% endif %}
                     </td>
                 </tr>

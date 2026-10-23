@@ -97,7 +97,7 @@
                         {% if log.status == 'sucesso' %}
                             <span class="metric-badge badge-success">Sucesso</span>
                         {% else %}
-                            <span class="metric-badge badge-danger" title="{{ log.mensagem }}">Erro</span>
+                            <span class="metric-badge badge-danger" title="{{ log.mensagem | safe_err }}">Erro</span>
                         {% endif %}
                     </td>
                 </tr>

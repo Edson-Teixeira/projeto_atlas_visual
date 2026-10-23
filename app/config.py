@@ -8,7 +8,7 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "atlas_super_secret_dev_key_2026")
     
     # Configurações do PostgreSQL
-    DB_HOST = os.getenv("DB_HOST", "192.168.1.102")
+    DB_HOST = os.getenv("DB_HOST", "100.66.197.52")
     DB_PORT = int(os.getenv("DB_PORT", "5432"))
     DB_USER = os.getenv("DB_USER", "admin")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "secretpassword")
@@ -21,5 +21,11 @@ class Config:
     PORT = int(os.getenv("PORT", "5000"))
     DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 
-    # Limites de upload (ex: até 100MB por arquivo)
+    # Segurança de Sessão e Cookies (Proteção contra leitura via JavaScript e DevTools)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() in ("true", "1", "t")
+    PERMANENT_SESSION_LIFETIME = int(os.getenv("SESSION_LIFETIME_SECONDS", 28800))
+
+    # Limites de upload (até 100MB por arquivo)
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024

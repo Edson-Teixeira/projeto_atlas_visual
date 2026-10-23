@@ -376,6 +376,58 @@ class AtlasSistemaTestCase(unittest.TestCase):
         execute("DELETE FROM brk_irregularidades WHERE os IN ('23-7301989', '23-7324933');")
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'irregularidades_abril.csv';")
 
+    def test_fiscalizacao_real_csv_format(self):
+        """Testa o padrão exato de arquivo fornecido pelo usuário com 28 colunas reais."""
+        real_csv = (
+            'Recurso,"Data","CDC/Matricula","Ordem de Serviço","Prazo Cliente","Status da Atividade","Nome","Endereço","Bairro","Cidade","Estado","CEP/Código Postal","Telefone","Telefone Celular","E-mail","Intervalo de Tempo","Janela de Serviço","Início","Fim","Início - Fim","Início do SLA","Fim do SLA","Duração","Tempo de Deslocamento","Tipo de Atividade","Habilidade de Trabalho","Área de Trabalho","Nome da Equipe"\n'
+            'RMM02LVF093T,"22/10/26","349951","23-8340813-TEST","27/11/2026 08:22:57","concluído","ROSECLEIDE BATISTA RAMOS","Rua CABREIRA II,0","CABREIRAS","MARECHAL DEODORO","AL","","","","rosecleidebatista@gmail.com","Dia Inteiro","08:15 - 09:15","10:32","10:39","10:32 - 10:39","21/10/26 08:22","27/11/26 08:22","00:07","02:21","Normal","04ÁGUA COMERCIAL FISCALIZAÇÃO IRREGULARIDADES TERCEIROS CAVALETE(1/100)","RMM - Marechal Deodoro","RMM02LVF093T"\n'
+            'RMM02LVF093T,"22/10/26","395409","23-8331183-TEST","25/11/2026 18:08:46","não concluído","MARIANA MARIA BARBOSA PEREIRA RAMOS DE ARAUJO","Rua LOT PARAISO DO FRANCES,2","CABREIRAS","MARECHAL DEODORO","AL","","","","filipearaujo969@gmail.com","Dia Inteiro","10:15 - 11:15","10:41","10:44","10:41 - 10:44","19/10/26 18:08","25/11/26 18:08","00:03","00:02","Normal","04ÁGUA COMERCIAL FISCALIZAÇÃO IRREGULARIDADES TERCEIROS CAVALETE(1/100)","RMM - Marechal Deodoro","RMM02LVF093T"\n'
+        )
+
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        user = query_one("SELECT id FROM atlas_usuarios WHERE username = 'test_fiscalizacao'")
+
+        file_storage = FileStorage(
+            stream=io.BytesIO(real_csv.encode('utf-8')),
+            filename="base_fiscalizacao_real.csv",
+            content_type="text/csv"
+        )
+
+        res = process_and_import(
+            file_storage=file_storage,
+            filename="base_fiscalizacao_real.csv",
+            target_table="brk_fiscalizacao",
+            contrato_id=contrato['id'],
+            usuario_id=user['id'],
+            tipo_base='principal',
+            action='substituir_data',
+            date_col='data'
+        )
+
+        self.assertTrue(res['success'], f"Importação falhou: {res.get('message')}")
+        self.assertEqual(res['total_lines'], 2)
+
+        row = query_one("SELECT * FROM brk_fiscalizacao WHERE ordem_servico = '23-8340813-TEST'")
+        self.assertIsNotNone(row)
+        self.assertEqual(row['recurso'], 'RMM02LVF093T')
+        self.assertEqual(str(row['data']), '2026-10-22')
+        self.assertEqual(row['cdc_matricula'], 349951)
+        self.assertEqual(row['status_atividade'], 'concluído')
+        self.assertEqual(row['nome'], 'ROSECLEIDE BATISTA RAMOS')
+        self.assertEqual(row['email'], 'rosecleidebatista@gmail.com')
+        self.assertEqual(row['intervalo_tempo'], 'Dia Inteiro')
+        self.assertEqual(row['janela_servico'], '08:15 - 09:15')
+        self.assertEqual(str(row['inicio']), '10:32:00')
+        self.assertEqual(str(row['fim']), '10:39:00')
+        self.assertEqual(row['tipo_atividade'], 'Normal')
+        self.assertEqual(row['area_trabalho'], 'RMM - Marechal Deodoro')
+        self.assertEqual(row['nome_equipe'], 'RMM02LVF093T')
+        self.assertEqual(row['tipo_servico'], 'Fiscalização')
+        self.assertIn(float(row['valor_servico']), [55.00, 108.72])
+
+        execute("DELETE FROM brk_fiscalizacao WHERE ordem_servico IN ('23-8340813-TEST', '23-8331183-TEST');")
+        execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'base_fiscalizacao_real.csv';")
+
     def test_favicon_and_logo_available(self):
         resp_fav = self.client.get('/favicon.ico')
         self.assertEqual(resp_fav.status_code, 200)

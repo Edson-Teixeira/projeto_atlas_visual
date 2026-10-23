@@ -580,6 +580,8 @@ def importar_servicos(contrato_id):
         flash(f"✅ Tabela '{table_val}' atualizada com sucesso ({len(novos_servicos)} tipos de serviços cadastrados)!", "success")
 
     except Exception as e:
-        flash(f"❌ Erro ao atualizar tabela de serviços: {str(e)}", "danger")
+        import logging
+        logging.exception("Erro ao atualizar tabela de serviços:")
+        flash("❌ Erro ao atualizar tabela de serviços. Verifique se o arquivo possui as colunas 'tipo_servico' e 'valor_servico' com dados válidos.", "danger")
 
     return redirect(dest_redirect)
