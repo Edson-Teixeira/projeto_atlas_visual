@@ -19,6 +19,8 @@ tmp/
 *.csv
 *.xlsx
 *.xls
+!modelos_tabelas/*.csv
+!modelos_tabelas/*.xlsx
 
 # Logs e IDEs
 *.log

@@ -97,14 +97,18 @@ def init_database():
     c_hidro = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_hidrometro'")
     if c_hidro:
         servicos_hidro = [
-            ('Instalação de Hidrômetro', 185.00),
-            ('Substituição de Hidrômetro', 145.00),
             ('Aferição de Hidrômetro', 95.50),
-            ('Manutenção de Ramal', 120.00),
-            ('Padronização de Cavalete', 160.00),
+            ('Instalação de Hidrômetro', 185.00),
             ('Lacração de Hidrômetro', 70.00),
-            ('Vistoria de Consumo', 80.00),
-            ('Outros Serviços Hidrometria', 50.00)
+            ('Manutenção de Ramal', 120.00),
+            ('Outros Serviços Hidrometria', 50.00),
+            ('Padronização de Cavalete', 160.00),
+            ('Remanejamento de Cavalete', 175.00),
+            ('Substituição de Hidrômetro', 145.00),
+            ('Supressão a Pedido', 90.00),
+            ('Troca por Defeito / Parado', 140.00),
+            ('Troca por Idade / Obsoleto', 130.00),
+            ('Vistoria de Consumo', 80.00)
         ]
         for s, v in servicos_hidro:
             execute("""
