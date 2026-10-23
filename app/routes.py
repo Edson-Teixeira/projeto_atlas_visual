@@ -136,7 +136,7 @@ def render_admin_dashboard(user):
 def render_operator_dashboard(user, contrato_id, is_admin_preview=False):
     """Renderiza a visão de operador para um contrato específico."""
     contrato = query_one("""
-        SELECT id, codigo, nome_exibicao, tabela_principal, tabela_secundaria, tabela_terciaria, coluna_data, criado_em
+        SELECT id, codigo, nome_exibicao, tabela_principal, tabela_secundaria, tabela_terciaria, tabela_valores, coluna_data, criado_em
         FROM atlas_contratos
         WHERE id = %s
     """, (contrato_id,))
@@ -175,16 +175,21 @@ def render_operator_dashboard(user, contrato_id, is_admin_preview=False):
         LIMIT 10
     """, (contrato['id'],))
 
-    # Tabela de Tipos de Serviço & Valores (habilitada para brk_fiscalizacao e brk_hidrometro)
-    has_services = contrato['codigo'] in ('brk_fiscalizacao', 'brk_hidrometro')
+    # Tabela de Tipos de Serviço & Valores (tabelas dedicadas: brk_fisca_valores e brk_hidro_valores)
+    table_val = contrato.get('tabela_valores')
+    if not table_val and contrato['codigo'] == 'brk_fiscalizacao':
+        table_val = 'brk_fisca_valores'
+    elif not table_val and contrato['codigo'] == 'brk_hidrometro':
+        table_val = 'brk_hidro_valores'
+
+    has_services = bool(table_val)
     servicos = []
     if has_services:
-        servicos = query_all("""
+        servicos = query_all(f"""
             SELECT id, tipo_servico, valor_servico, atualizado_em
-            FROM atlas_servicos_valores
-            WHERE contrato_id = %s
+            FROM {table_val}
             ORDER BY tipo_servico ASC
-        """, (contrato['id'],))
+        """)
 
     todos_contratos = []
     if user['is_admin']:
@@ -199,6 +204,7 @@ def render_operator_dashboard(user, contrato_id, is_admin_preview=False):
         carga_hoje=bool(carga_hoje),
         historico=historico_importacoes,
         has_services=has_services,
+        table_val=table_val,
         servicos=servicos,
         is_admin_preview=is_admin_preview,
         today=date.today().isoformat()
@@ -413,17 +419,26 @@ def exportar_servicos(contrato_id):
         flash("Acesso não autorizado a este contrato.", "danger")
         return redirect(url_for('main.dashboard'))
 
-    contrato = query_one("SELECT codigo, nome_exibicao FROM atlas_contratos WHERE id = %s", (contrato_id,))
+    contrato = query_one("SELECT codigo, nome_exibicao, tabela_valores FROM atlas_contratos WHERE id = %s", (contrato_id,))
     if not contrato:
         flash("Contrato não encontrado.", "danger")
         return redirect(url_for('main.dashboard'))
 
-    servicos = query_all("""
+    table_val = contrato.get('tabela_valores')
+    if not table_val and contrato['codigo'] == 'brk_fiscalizacao':
+        table_val = 'brk_fisca_valores'
+    elif not table_val and contrato['codigo'] == 'brk_hidrometro':
+        table_val = 'brk_hidro_valores'
+
+    if not table_val:
+        flash("Este contrato não possui tabela de valores configurada.", "warning")
+        return redirect(url_for('main.dashboard'))
+
+    servicos = query_all(f"""
         SELECT tipo_servico, valor_servico 
-        FROM atlas_servicos_valores 
-        WHERE contrato_id = %s 
+        FROM {table_val} 
         ORDER BY tipo_servico ASC
-    """, (contrato_id,))
+    """)
 
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';')
@@ -433,7 +448,7 @@ def exportar_servicos(contrato_id):
         writer.writerow([s['tipo_servico'], v])
 
     csv_bytes = output.getvalue().encode('utf-8-sig')
-    filename = f"tabela_servicos_{contrato['codigo']}.csv"
+    filename = f"{table_val}.csv"
 
     return Response(
         csv_bytes,
@@ -455,6 +470,16 @@ def importar_servicos(contrato_id):
         return redirect(url_for('main.dashboard'))
 
     dest_redirect = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
+
+    table_val = contrato.get('tabela_valores')
+    if not table_val and contrato['codigo'] == 'brk_fiscalizacao':
+        table_val = 'brk_fisca_valores'
+    elif not table_val and contrato['codigo'] == 'brk_hidrometro':
+        table_val = 'brk_hidro_valores'
+
+    if not table_val:
+        flash("Este contrato não possui tabela de valores configurada.", "warning")
+        return redirect(dest_redirect)
 
     if 'file' not in request.files:
         flash("Nenhum arquivo enviado.", "danger")
@@ -508,7 +533,7 @@ def importar_servicos(contrato_id):
             except Exception:
                 valor_f = 0.00
 
-            novos_servicos.append((contrato_id, tipo, valor_f))
+            novos_servicos.append((tipo, valor_f))
 
         if not novos_servicos:
             flash("Nenhum serviço válido identificado no arquivo.", "warning")
@@ -516,13 +541,23 @@ def importar_servicos(contrato_id):
 
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM atlas_servicos_valores WHERE contrato_id = %s", (contrato_id,))
+                # Substitui na tabela dedicada
+                cur.execute(f"DELETE FROM {table_val}")
                 
                 from psycopg2.extras import execute_values
                 execute_values(
                     cur,
-                    "INSERT INTO atlas_servicos_valores (contrato_id, tipo_servico, valor_servico) VALUES %s",
+                    f"INSERT INTO {table_val} (tipo_servico, valor_servico) VALUES %s",
                     novos_servicos,
+                    page_size=500
+                )
+
+                # Mantém sincronizado na tabela legada atlas_servicos_valores
+                cur.execute("DELETE FROM atlas_servicos_valores WHERE contrato_id = %s", (contrato_id,))
+                execute_values(
+                    cur,
+                    "INSERT INTO atlas_servicos_valores (contrato_id, tipo_servico, valor_servico) VALUES %s",
+                    [(contrato_id, tipo, val) for tipo, val in novos_servicos],
                     page_size=500
                 )
 
@@ -534,15 +569,15 @@ def importar_servicos(contrato_id):
                     contrato_id,
                     user['id'],
                     'servicos',
-                    'atlas_servicos_valores',
+                    table_val,
                     file.filename,
                     len(novos_servicos),
                     'substituicao_completa',
                     'sucesso',
-                    f"Tabela de serviços e valores substituída com sucesso ({len(novos_servicos)} registros)."
+                    f"Tabela de serviços e valores ({table_val}) substituída com sucesso ({len(novos_servicos)} registros)."
                 ))
 
-        flash(f"✅ Tabela de serviços e valores atualizada com sucesso ({len(novos_servicos)} tipos de serviços cadastrados)!", "success")
+        flash(f"✅ Tabela '{table_val}' atualizada com sucesso ({len(novos_servicos)} tipos de serviços cadastrados)!", "success")
 
     except Exception as e:
         flash(f"❌ Erro ao atualizar tabela de serviços: {str(e)}", "danger")

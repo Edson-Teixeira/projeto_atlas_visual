@@ -360,9 +360,14 @@
                         <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></span>
                         Tipos de Serviço & Valores
                     </h3>
-                    <span style="font-size: 12px; color: var(--text-muted);">
-                        Tabela de precificação do contrato ({{ servicos|length }} serviços)
-                    </span>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                        <span class="metric-badge badge-neutral" style="font-size: 11px; font-family: monospace;">
+                            {{ table_val or 'tabela_valores' }}
+                        </span>
+                        <span style="font-size: 12px; color: var(--text-muted);">
+                            {{ servicos|length }} serviços cadastrados
+                        </span>
+                    </div>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -389,11 +394,11 @@
             <!-- Área Retrátil para Upload / Substituição da Tabela de Serviços -->
             <div id="services-upload-drawer" style="display: none; background: var(--bg-surface-elevated); border: 1px dashed var(--primary); border-radius: var(--radius-md); padding: 16px; margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <strong style="font-size: 13px; color: var(--text-primary);">Substituir Tabela de Serviços</strong>
+                    <strong style="font-size: 13px; color: var(--text-primary);">Substituir Tabela {{ table_val }}</strong>
                     <button type="button" onclick="document.getElementById('services-upload-drawer').classList.remove('active')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1;">&times;</button>
                 </div>
                 <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-                    Envie a planilha (CSV ou Excel) com as colunas <code>tipo_servico</code> e <code>valor_servico</code>. A tabela anterior deste contrato será <strong>integralmente substituída</strong> pelos novos valores.
+                    Envie a planilha (CSV ou Excel) com as colunas <code>tipo_servico</code> e <code>valor_servico</code>. A tabela dedicada <strong>{{ table_val }}</strong> deste contrato será <strong>integralmente substituída</strong> pelos novos valores.
                 </p>
                 <form method="POST" action="{{ url_for('main.importar_servicos', contrato_id=contrato.id) }}" enctype="multipart/form-data" style="display: flex; gap: 8px; flex-wrap: wrap;">
                     <input type="file" name="file" accept=".csv, .xlsx, .xls" class="form-control" style="font-size: 12px; padding: 6px 10px; flex: 1; min-width: 200px;" required>

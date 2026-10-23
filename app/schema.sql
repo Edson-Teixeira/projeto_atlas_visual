@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS atlas_contratos (
     tabela_principal VARCHAR(100) NOT NULL,
     tabela_secundaria VARCHAR(100),
     tabela_terciaria VARCHAR(100),
+    tabela_valores VARCHAR(100),
     coluna_data VARCHAR(50) DEFAULT 'data',
     ativo BOOLEAN DEFAULT TRUE,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -72,7 +73,23 @@ CREATE INDEX IF NOT EXISTS idx_brk_irregularidades_data ON brk_irregularidades(d
 CREATE INDEX IF NOT EXISTS idx_brk_irregularidades_os ON brk_irregularidades(os);
 CREATE INDEX IF NOT EXISTS idx_brk_irregularidades_cdc ON brk_irregularidades(cdc);
 
--- 6. Tabela de Tipos de Serviço e Valores por Contrato
+-- 6. Tabela de Valores Separada para BRK Fiscalização
+CREATE TABLE IF NOT EXISTS brk_fisca_valores (
+    id SERIAL PRIMARY KEY,
+    tipo_servico VARCHAR(255) UNIQUE NOT NULL,
+    valor_servico NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. Tabela de Valores Separada para BRK Hidrômetro
+CREATE TABLE IF NOT EXISTS brk_hidro_valores (
+    id SERIAL PRIMARY KEY,
+    tipo_servico VARCHAR(255) UNIQUE NOT NULL,
+    valor_servico NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. Tabela de Tipos de Serviço e Valores por Contrato (Legado / Backup)
 CREATE TABLE IF NOT EXISTS atlas_servicos_valores (
     id SERIAL PRIMARY KEY,
     contrato_id INT NOT NULL REFERENCES atlas_contratos(id) ON DELETE CASCADE,

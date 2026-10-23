@@ -184,17 +184,32 @@ class AtlasSistemaTestCase(unittest.TestCase):
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'teste_data_mm_dd_yy.csv';")
 
     def test_services_table_visibility_and_export(self):
+        # 1. Fiscalização -> brk_fisca_valores
         self.client.post('/login', data={'username': 'test_fiscalizacao', 'password': 'test_fisc123'})
         resp = self.client.get('/dashboard')
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"Tipos de Servi", resp.data)
-        self.assertIn(b"dashboard-split-layout", resp.data)
+        self.assertIn(b"brk_fisca_valores", resp.data)
 
         contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
         resp_export = self.client.get(f"/servicos/exportar/{contrato['id']}")
         self.assertEqual(resp_export.status_code, 200)
         self.assertEqual(resp_export.mimetype, 'text/csv')
         self.assertIn(b"tipo_servico;valor_servico", resp_export.data)
+
+        # 2. Hidrômetro -> brk_hidro_valores
+        self.client.get('/logout')
+        self.client.post('/login', data={'username': 'test_hidrometro', 'password': 'test_hidro123'})
+        resp_h = self.client.get('/dashboard')
+        self.assertEqual(resp_h.status_code, 200)
+        self.assertIn(b"Tipos de Servi", resp_h.data)
+        self.assertIn(b"brk_hidro_valores", resp_h.data)
+
+        contrato_h = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_hidrometro'")
+        resp_export_h = self.client.get(f"/servicos/exportar/{contrato_h['id']}")
+        self.assertEqual(resp_export_h.status_code, 200)
+        self.assertEqual(resp_export_h.mimetype, 'text/csv')
+        self.assertIn(b"tipo_servico;valor_servico", resp_export_h.data)
 
     def test_services_import_replace(self):
         self.client.post('/login', data={'username': 'test_fiscalizacao', 'password': 'test_fisc123'})
@@ -217,6 +232,11 @@ class AtlasSistemaTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"Vistoria Especial", resp.data)
         self.assertIn(b"Troca Expressa", resp.data)
+
+        # Confirma que foi gravado na tabela física brk_fisca_valores
+        row = query_one("SELECT valor_servico FROM brk_fisca_valores WHERE tipo_servico = 'Vistoria Especial'")
+        self.assertIsNotNone(row)
+        self.assertEqual(float(row['valor_servico']), 250.50)
 
         # Restaura os servicos padrao para fiscalizacao
         from scripts.init_db import init_database
