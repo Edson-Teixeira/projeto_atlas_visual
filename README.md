@@ -47,7 +47,33 @@ Sistema web com interface moderna (*Dark-First*) desenvolvido em **Python (Flask
 
 ---
 
-## 🛠️ Instalação e Execução Local
+## 🛠️ Instalação e Execução
+
+### Opção A: Via Docker / Dockge (Recomendado no Umbrel)
+
+O projeto já inclui `Dockerfile` e `docker-compose.yml` otimizados para produção com Gunicorn.
+
+```bash
+# 1. Entre na pasta do projeto clonado
+cd projeto_atlas_visual
+
+# 2. Crie ou configure seu arquivo .env (se necessário ajustar IP do Postgres)
+cp .env.example .env
+
+# 3. Suba o container com build automático
+docker compose up -d --build
+```
+
+Acesse no seu navegador: **`http://<IP_DO_SEU_UMBREL>:5000`**
+
+#### No Dockge (Interface Web):
+1. O Dockge detectará automaticamente a stack `projeto_atlas_visual` ou `api_cifra`.
+2. Se quiser subir pelo painel do Dockge, basta clicar em **Deploy / Start**.
+3. As variáveis de conexão com o PostgreSQL podem ser editadas diretamente no editor do Dockge se o banco estiver em outro host ou porta.
+
+---
+
+### Opção B: Execução Local (Python venv)
 
 ```bash
 # 1. Ativar o ambiente virtual

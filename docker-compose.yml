@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  atlas_sistema:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atlas_sistema
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-atlas_secret_key_9f83a8f4c2e17d6b9a84210e3d7f9c2b}
+      - DB_HOST=${DB_HOST:-192.168.1.102}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-admin}
+      - DB_PASSWORD=${DB_PASSWORD:-secretpassword}
+      - DB_NAME=${DB_NAME:-cifra}
+      - DB_DEFAULT_SCHEMA=${DB_DEFAULT_SCHEMA:-public}
+      - DB_CONNECT_TIMEOUT=${DB_CONNECT_TIMEOUT:-5}
+      - PORT=5000
+      - DEBUG=${DEBUG:-False}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
