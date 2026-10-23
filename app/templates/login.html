@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Atlas Sistema{% endblock %}
+
+{% block layout %}
+<div class="glow-bg" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
+    <div class="form-card">
+        <!-- Cabeçalho do Card -->
+        <div style="text-align: center; margin-bottom: 28px;">
+            <div class="brand-icon" style="width: 52px; height: 52px; margin: 0 auto 16px auto;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+            </div>
+            <h2 style="font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">Atlas Sistema</h2>
+            <p style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">Acesse o painel com as credenciais do seu contrato</p>
+        </div>
+
+        <!-- Alertas Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Formulário -->
+        <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+            <div class="form-group">
+                <label class="form-label" for="username">Usuário</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="ex: fiscalizacao" value="{{ username or '' }}" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Senha</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 10px; font-size: 15px;">
+                <span>Entrar no Sistema</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </button>
+        </form>
+
+        <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 16px;">
+            <span style="font-size: 12px; color: var(--text-muted);">
+                Cada login acessa exclusivamente a base do respectivo contrato.
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}

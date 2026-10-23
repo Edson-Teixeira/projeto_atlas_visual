@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Ambiente e Configurações Sensíveis
+.env
+.env.local
+
+# Uploads temporários
+uploads/
+tmp/
+*.csv
+*.xlsx
+*.xls
+
+# Logs e IDEs
+*.log
+.vscode/
+.idea/
+.DS_Store

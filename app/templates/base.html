@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Atlas Sistema{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% block layout %}
+    <div class="glow-bg">
+        <!-- Topbar / Cabeçalho -->
+        <header class="app-header">
+            <a href="{{ url_for('main.dashboard') }}" class="brand-wrapper">
+                <div class="brand-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>Atlas Sistema</h1>
+                    <span>Gestão & Importação de Dados</span>
+                </div>
+            </a>
+
+            <div class="header-actions">
+                {% if contrato %}
+                    <span class="metric-badge badge-info" style="font-size: 12px; padding: 5px 12px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                            <path d="M7 7h10"></path>
+                            <path d="M7 12h10"></path>
+                            <path d="M7 17h6"></path>
+                        </svg>
+                        <span>{{ contrato.nome_exibicao }}</span>
+                    </span>
+                {% endif %}
+
+                {% if user %}
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary);">
+                        <div style="width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--bg-surface-elevated); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary);">
+                            {{ user.nome[:2].upper() }}
+                        </div>
+                        <span style="font-weight: 600; color: var(--text-primary);">{{ user.nome }}</span>
+                        {% if user.is_admin %}
+                            <span class="metric-badge badge-warning" style="font-size: 10px;">Admin</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <button id="theme-toggle" class="btn-icon" title="Alternar tema"></button>
+
+                {% if user %}
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" title="Encerrar sessão" style="gap: 6px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        <span>Sair</span>
+                    </a>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Conteúdo -->
+        <main class="content-wrapper">
+            <!-- Alertas Flash -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% endblock %}
+</body>
+</html>
