@@ -210,6 +210,103 @@ def read_uploaded_file(file_storage, filename: str) -> pd.DataFrame:
 
     return df
 
+# Mapeamento expandido de sinônimos/aliases para máxima robustez
+SYNONYMS = {
+    'ordem_servico': ['ordem_de_servico', 'os', 'ordem', 'ordem_servico'],
+    'status_atividade': ['status_da_atividade', 'status', 'status_atividade'],
+    'email': ['e_mail', 'correio_eletronico', 'email'],
+    'intervalo_tempo': ['intervalo_de_tempo', 'intervalo', 'intervalo_tempo'],
+    'janela_servico': ['janela_de_servico', 'janela', 'janela_servico'],
+    'inicio_sla': ['inicio_do_sla', 'sla_inicio', 'inicio_sla'],
+    'fim_sla': ['fim_do_sla', 'sla_fim', 'fim_sla'],
+    'tempo_deslocamento': ['tempo_de_deslocamento', 'deslocamento', 'tempo_deslocamento'],
+    'tipo_atividade': ['tipo_de_atividade', 'atividade', 'tipo_atividade'],
+    'habilidade_trabalho': ['habilidade_de_trabalho', 'habilidade', 'habilidade_trabalho'],
+    'area_trabalho': ['area_de_trabalho', 'area', 'area_trabalho'],
+    'nome_equipe': ['nome_da_equipe', 'equipe', 'nome_equipe'],
+    'cdc_matricula': ['cdc', 'matricula', 'conta', 'cdc_matricula', 'cdc_ou_matricula'],
+    'cdc': ['cdc_matricula', 'matricula', 'conta', 'cdc'],
+    'os': ['ordem_servico', 'ordem_de_servico', 'os', 'ordem'],
+    'prazo_cliente': ['prazo_do_cliente', 'prazo', 'prazo_cliente'],
+    'cep_codigo_postal': ['cep', 'codigo_postal', 'cep_codigo_postal'],
+    'telefone_celular': ['celular', 'tel_celular', 'telefone_celular'],
+    'no_toi': ['n_toi', 'num_toi', 'numero_toi', 'toi'],
+    'num_toi': ['no_toi', 'n_toi', 'numero_toi', 'toi'],
+    'observacoes': ['observacao', 'obs'],
+    'equipe': ['nome_da_equipe', 'nome_equipe', 'equipe'],
+    'irregularidade': ['irregularidade', 'descricao_irregularidade', 'tipo_irregularidade', 'motivo_irregularidade'],
+}
+
+# Colunas obrigatórias exigidas no padrão de cada base para impedir upload de bases incompatíveis
+REQUIRED_COLUMNS_BY_TABLE = {
+    'brk_fiscalizacao': ['ordem_servico', 'status_atividade', 'data', 'recurso', 'cdc_matricula'],
+    'brk_hidrometro': ['ordem_servico', 'status_atividade', 'data', 'recurso', 'cdc_matricula'],
+    'brk_fisca_secundaria': ['ordem_servico', 'status_atividade', 'data'],
+    'brk_irregularidades': ['os', 'data', 'irregularidade'],
+    'brk_pav_comer': ['ordem_servico', 'data'],
+    'brk_pav_opera': ['ordem_servico', 'data'],
+}
+
+COLUMN_DISPLAY_NAMES = {
+    'ordem_servico': 'Ordem de Serviço (OS)',
+    'status_atividade': 'Status da Atividade',
+    'data': 'Data',
+    'recurso': 'Recurso',
+    'cdc_matricula': 'CDC/Matrícula',
+    'os': 'OS / Ordem de Serviço',
+    'cdc': 'CDC / Matrícula',
+    'irregularidade': 'Irregularidade',
+    'no_toi': 'Nº TOI',
+    'equipe': 'Equipe',
+    'nome_equipe': 'Nome da Equipe',
+    'habilidade_trabalho': 'Habilidade de Trabalho',
+    'area_trabalho': 'Área de Trabalho',
+    'prazo_cliente': 'Prazo do Cliente',
+    'tipo_servico': 'Tipo de Serviço',
+    'valor_servico': 'Valor do Serviço',
+}
+
+TABLE_BASE_NAMES = {
+    'brk_fiscalizacao': 'Base Principal (Fiscalização)',
+    'brk_hidrometro': 'Base Principal (Hidrômetro)',
+    'brk_fisca_secundaria': 'Base Secundária (Diagnóstico)',
+    'brk_irregularidades': 'Base de Irregularidades',
+    'brk_pav_comer': 'Base Pav. Comercial',
+    'brk_pav_opera': 'Base Pav. Operacional',
+}
+
+def validate_file_columns(target_table: str, present_cols: set[str], db_cols: set[str]) -> tuple[bool, str]:
+    """
+    Valida rigorosamente se o arquivo enviado possui a estrutura e o padrão de colunas
+    esperado para a tabela de destino, impedindo a importação de bases incompatíveis ou arquivos aleatórios.
+    """
+    base_name = TABLE_BASE_NAMES.get(target_table, f"tabela '{target_table}'")
+
+    # 1. Validação por regras específicas da tabela de destino
+    if target_table in REQUIRED_COLUMNS_BY_TABLE:
+        req_cols = REQUIRED_COLUMNS_BY_TABLE[target_table]
+        missing = [c for c in req_cols if c not in present_cols]
+        if missing:
+            missing_labels = [COLUMN_DISPLAY_NAMES.get(c, c) for c in missing]
+            return False, (
+                f"O arquivo enviado não possui o padrão de colunas esperado para a {base_name}. "
+                f"Colunas obrigatórias ausentes no arquivo: {', '.join(missing_labels)}. "
+                f"Verifique se selecionou o arquivo correto."
+            )
+
+    # 2. Validação geral / heurística para tabelas customizadas
+    matched = [c for c in present_cols if c in db_cols and c != 'id']
+    if not matched:
+        return False, f"Nenhuma coluna do arquivo coincide com a estrutura da {base_name}."
+
+    if len(matched) < 2 and len(db_cols) > 3:
+        return False, (
+            f"O arquivo enviado não possui o padrão de colunas esperado para a {base_name}. "
+            f"Apenas a coluna '{matched[0]}' foi reconhecida. Verifique se selecionou o arquivo correto."
+        )
+
+    return True, ""
+
 def process_and_import(
     file_storage,
     filename: str,
@@ -240,31 +337,6 @@ def process_and_import(
 
         db_cols = set(col_types.keys())
 
-        # Mapeamento expandido de sinônimos/aliases para máxima robustez
-        SYNONYMS = {
-            'ordem_servico': ['ordem_de_servico', 'os', 'ordem', 'ordem_servico'],
-            'status_atividade': ['status_da_atividade', 'status', 'status_atividade'],
-            'email': ['e_mail', 'correio_eletronico', 'email'],
-            'intervalo_tempo': ['intervalo_de_tempo', 'intervalo', 'intervalo_tempo'],
-            'janela_servico': ['janela_de_servico', 'janela', 'janela_servico'],
-            'inicio_sla': ['inicio_do_sla', 'sla_inicio', 'inicio_sla'],
-            'fim_sla': ['fim_do_sla', 'sla_fim', 'fim_sla'],
-            'tempo_deslocamento': ['tempo_de_deslocamento', 'deslocamento', 'tempo_deslocamento'],
-            'tipo_atividade': ['tipo_de_atividade', 'atividade', 'tipo_atividade'],
-            'habilidade_trabalho': ['habilidade_de_trabalho', 'habilidade', 'habilidade_trabalho'],
-            'area_trabalho': ['area_de_trabalho', 'area', 'area_trabalho'],
-            'nome_equipe': ['nome_da_equipe', 'equipe', 'nome_equipe'],
-            'cdc_matricula': ['cdc', 'matricula', 'conta', 'cdc_matricula', 'cdc_ou_matricula'],
-            'cdc': ['cdc_matricula', 'matricula', 'conta', 'cdc'],
-            'prazo_cliente': ['prazo_do_cliente', 'prazo', 'prazo_cliente'],
-            'cep_codigo_postal': ['cep', 'codigo_postal', 'cep_codigo_postal'],
-            'telefone_celular': ['celular', 'tel_celular', 'telefone_celular'],
-            'no_toi': ['n_toi', 'num_toi', 'numero_toi', 'toi'],
-            'num_toi': ['no_toi', 'n_toi', 'numero_toi', 'toi'],
-            'observacoes': ['observacao', 'obs'],
-            'equipe': ['nome_da_equipe', 'nome_equipe', 'equipe'],
-        }
-
         # Renomeia colunas do arquivo se houver sinônimo ou correspondência inteligente
         renames = {}
         for col in df.columns:
@@ -294,6 +366,24 @@ def process_and_import(
 
         if renames:
             df.rename(columns=renames, inplace=True)
+
+        # 4. Validação estrita do padrão de colunas para a tabela de destino
+        is_valid, validation_msg = validate_file_columns(target_table, set(df.columns), db_cols)
+        if not is_valid:
+            try:
+                execute("""
+                    INSERT INTO atlas_importacoes_log 
+                    (contrato_id, usuario_id, tipo_base, tabela_destino, nome_arquivo, total_linhas, acao, status, mensagem)
+                    VALUES (%s, %s, %s, %s, %s, 0, %s, 'erro', %s)
+                """, (contrato_id, usuario_id, tipo_base, target_table, filename, action, validation_msg))
+            except Exception:
+                pass
+
+            return {
+                "success": False,
+                "message": validation_msg,
+                "total_lines": 0
+            }
 
         # Mapeia colunas coincidentes (desconsidera colunas como 'id' autoincrement se o arquivo não tiver)
         matched_cols = [c for c in df.columns if c in db_cols and c != 'id']

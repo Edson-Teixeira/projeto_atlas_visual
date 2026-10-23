@@ -1,3 +1,5 @@
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import io
 import unittest
 import pandas as pd
@@ -468,6 +470,102 @@ class AtlasSistemaTestCase(unittest.TestCase):
         # Limpeza
         execute("DELETE FROM brk_fiscalizacao WHERE nome LIKE %s", ('Teste Sem %',))
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'teste_linhas_nulas.csv';")
+
+    def test_import_rejects_unrelated_file_missing_columns(self):
+        """Valida que uma base alheia/incompatível (ex: cifra-auditoria.csv com apenas email) é rejeitada com erro explícito."""
+        csv_invalido = (
+            "data_hora;usuario;acao;ip;email\n"
+            "2026-10-23 14:00;danilo;login;10.0.0.1;danilo@cifraengenharia.com.br\n"
+        )
+        file_storage = FileStorage(
+            stream=io.BytesIO(csv_invalido.encode('utf-8')),
+            filename="cifra-auditoria.csv",
+            content_type="text/csv"
+        )
+
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        user = query_one("SELECT id FROM atlas_usuarios WHERE username = 'test_fiscalizacao'")
+
+        count_before = query_one("SELECT COUNT(*) as c FROM brk_fiscalizacao")['c']
+
+        res = process_and_import(
+            file_storage=file_storage,
+            filename="cifra-auditoria.csv",
+            target_table="brk_fiscalizacao",
+            contrato_id=contrato['id'],
+            usuario_id=user['id'],
+            tipo_base='principal',
+            action='substituir_data',
+            date_col='data'
+        )
+
+        self.assertFalse(res['success'], "O arquivo aleatório deveria ter sido rejeitado!")
+        self.assertEqual(res['total_lines'], 0)
+        self.assertIn("O arquivo enviado não possui o padrão de colunas esperado", res['message'])
+        self.assertIn("Colunas obrigatórias ausentes", res['message'])
+        self.assertIn("Ordem de Serviço (OS)", res['message'])
+        self.assertIn("Status da Atividade", res['message'])
+
+        # Garante que nenhum registro espúrio foi inserido na base
+        count_after = query_one("SELECT COUNT(*) as c FROM brk_fiscalizacao")['c']
+        self.assertEqual(count_before, count_after)
+
+        # Limpeza do log gerado no teste
+        execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'cifra-auditoria.csv';")
+
+    def test_import_rejects_unrelated_file_for_secundaria(self):
+        """Valida que base incompatível é rejeitada na Base Secundária (Diagnóstico)."""
+        csv_invalido = (
+            "codigo_produto;descricao;valor\n"
+            "001;Tubo PVC;15.50\n"
+        )
+        file_storage = FileStorage(
+            stream=io.BytesIO(csv_invalido.encode('utf-8')),
+            filename="produtos.csv",
+            content_type="text/csv"
+        )
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        user = query_one("SELECT id FROM atlas_usuarios WHERE username = 'test_fiscalizacao'")
+
+        res = process_and_import(
+            file_storage=file_storage,
+            filename="produtos.csv",
+            target_table="brk_fisca_secundaria",
+            contrato_id=contrato['id'],
+            usuario_id=user['id'],
+            tipo_base='secundaria'
+        )
+
+        self.assertFalse(res['success'])
+        self.assertIn("padrão de colunas esperado para a Base Secundária", res['message'])
+        execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'produtos.csv';")
+
+    def test_import_rejects_unrelated_file_for_irregularidades(self):
+        """Valida que base incompatível é rejeitada na Base de Irregularidades."""
+        csv_invalido = (
+            "nome_cliente;cpf;telefone\n"
+            "Joao da Silva;12345678900;82999998888\n"
+        )
+        file_storage = FileStorage(
+            stream=io.BytesIO(csv_invalido.encode('utf-8')),
+            filename="clientes.csv",
+            content_type="text/csv"
+        )
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        user = query_one("SELECT id FROM atlas_usuarios WHERE username = 'test_fiscalizacao'")
+
+        res = process_and_import(
+            file_storage=file_storage,
+            filename="clientes.csv",
+            target_table="brk_irregularidades",
+            contrato_id=contrato['id'],
+            usuario_id=user['id'],
+            tipo_base='irregularidades'
+        )
+
+        self.assertFalse(res['success'])
+        self.assertIn("padrão de colunas esperado para a Base de Irregularidades", res['message'])
+        execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'clientes.csv';")
 
     def test_favicon_and_logo_available(self):
         resp_fav = self.client.get('/favicon.ico')
