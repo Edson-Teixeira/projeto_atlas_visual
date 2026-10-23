@@ -67,6 +67,47 @@ def init_database():
         else:
             print(f"Usuário já existe: {username}")
 
+    # 3. Serviços e Valores padrão para BRK Fiscalização e BRK Hidrômetro
+    c_fisc = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+    if c_fisc:
+        servicos_fisc = [
+            ('Corte', 112.90),
+            ('Hidrômetro', 200.14),
+            ('Fiscalização', 108.72),
+            ('Religação', 84.29),
+            ('Regularização', 100.91),
+            ('Recomposição', 75.00),
+            ('Troca de Padrão', 135.50),
+            ('Vistoria Técnica', 65.00),
+            ('Lacração', 55.00),
+            ('Outros', 45.00)
+        ]
+        for s, v in servicos_fisc:
+            execute("""
+                INSERT INTO atlas_servicos_valores (contrato_id, tipo_servico, valor_servico)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (contrato_id, tipo_servico) DO UPDATE SET valor_servico = EXCLUDED.valor_servico;
+            """, (c_fisc['id'], s, v))
+
+    c_hidro = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_hidrometro'")
+    if c_hidro:
+        servicos_hidro = [
+            ('Instalação de Hidrômetro', 185.00),
+            ('Substituição de Hidrômetro', 145.00),
+            ('Aferição de Hidrômetro', 95.50),
+            ('Manutenção de Ramal', 120.00),
+            ('Padronização de Cavalete', 160.00),
+            ('Lacração de Hidrômetro', 70.00),
+            ('Vistoria de Consumo', 80.00),
+            ('Outros Serviços Hidrometria', 50.00)
+        ]
+        for s, v in servicos_hidro:
+            execute("""
+                INSERT INTO atlas_servicos_valores (contrato_id, tipo_servico, valor_servico)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (contrato_id, tipo_servico) DO UPDATE SET valor_servico = EXCLUDED.valor_servico;
+            """, (c_hidro['id'], s, v))
+
     print("\nInicialização concluída com sucesso!")
 
 if __name__ == "__main__":

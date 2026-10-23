@@ -5,6 +5,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     initDropzones();
+    initServiceSearch();
 });
 
 // 1. TEMA CLARO / ESCURO
@@ -107,6 +108,25 @@ function initDropzones() {
                 if (submitBtn) {
                     submitBtn.disabled = false;
                 }
+            }
+        });
+    });
+}
+
+// 3. PESQUISA INSTANTÂNEA DE SERVIÇOS
+function initServiceSearch() {
+    const searchInput = document.getElementById("service-search-input");
+    if (!searchInput) return;
+
+    searchInput.addEventListener("input", () => {
+        const query = searchInput.value.toLowerCase().trim();
+        const rows = document.querySelectorAll("#services-table-body tr");
+        rows.forEach(row => {
+            const text = row.querySelector(".service-name")?.textContent.toLowerCase() || "";
+            if (text.includes(query)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
             }
         });
     });

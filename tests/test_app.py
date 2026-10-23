@@ -163,5 +163,52 @@ class AtlasSistemaTestCase(unittest.TestCase):
         execute("DELETE FROM brk_fiscalizacao WHERE ordem_servico IN ('OS-DATE-01', 'OS-DATE-02');")
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'teste_data_mm_dd_yy.csv';")
 
+    def test_services_table_visibility_and_export(self):
+        # 1. Login com fiscalizacao (deve ter tabela de servicos)
+        self.client.post('/login', data={'username': 'fiscalizacao', 'password': 'fiscalizacao123'})
+        resp = self.client.get('/dashboard')
+        self.assertIn(b"Tipos de Servi", resp.data)
+        self.assertIn(b"dashboard-split-layout", resp.data)
+
+        # 2. Exporta CSV de servicos
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        resp_export = self.client.get(f"/servicos/exportar/{contrato['id']}")
+        self.assertEqual(resp_export.status_code, 200)
+        self.assertEqual(resp_export.mimetype, 'text/csv')
+        self.assertIn(b"tipo_servico;valor_servico", resp_export.data)
+        self.assertIn(b"Corte", resp_export.data)
+
+    def test_services_import_replace(self):
+        # Login como fiscalizacao
+        self.client.post('/login', data={'username': 'fiscalizacao', 'password': 'fiscalizacao123'})
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+
+        # Envia novo CSV para substituir
+        novo_csv = (
+            "tipo_servico;valor_servico\n"
+            "Vistoria Especial;250,50\n"
+            "Troca Expressa;180.00\n"
+        )
+        data = {
+            'file': (io.BytesIO(novo_csv.encode('utf-8')), 'novos_servicos.csv')
+        }
+        resp = self.client.post(
+            f"/servicos/importar/{contrato['id']}",
+            data=data,
+            content_type='multipart/form-data',
+            follow_redirects=True
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Vistoria Especial", resp.data)
+        self.assertIn(b"Troca Expressa", resp.data)
+
+        # Confirma que 'Corte' (antigo) foi removido na substituicao completa
+        antigo = query_one("SELECT id FROM atlas_servicos_valores WHERE contrato_id = %s AND tipo_servico = 'Corte'", (contrato['id'],))
+        self.assertIsNone(antigo)
+
+        # Restaura os servicos padrao para fiscalizacao
+        from scripts.init_db import init_database
+        init_database()
+
 if __name__ == '__main__':
     unittest.main()

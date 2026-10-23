@@ -103,7 +103,269 @@
     </div>
 </div>
 
-<!-- SEÇÃO DE IMPORTAÇÃO (CARDS LADO A LADO) -->
+{% if has_services %}
+<div class="dashboard-split-layout">
+    <!-- COLUNA ESQUERDA: CONTEÚDO OPERACIONAL -->
+    <div class="split-col-left">
+        <!-- Cards de Upload (Base Principal e Secundária se houver) -->
+        <div class="upload-grid" style="grid-template-columns: 1fr;">
+            <!-- Card 1: Base Principal -->
+            <div id="card-upload-principal" class="upload-box">
+                <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                        <h3 style="font-size: 18px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--info);"></span>
+                            Importar Base Principal
+                        </h3>
+                        <span class="metric-badge badge-info">{{ contrato.tabela_principal }}</span>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+                        Envie o arquivo diário da operação principal. Suporta arquivos <strong>.CSV</strong> e planilhas <strong>.XLSX</strong>.
+                    </p>
+
+                    <form method="POST" action="{{ url_for('main.importar_base', tipo_base='principal') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="contrato_id" value="{{ contrato.id }}">
+
+                        <div class="upload-dropzone">
+                            <input type="file" name="file" accept=".csv, .xlsx, .xls" style="display: none;" required>
+                            <div class="upload-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                            </div>
+                            <strong style="display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 4px;">
+                                Clique para selecionar ou arraste o arquivo aqui
+                            </strong>
+                            <span style="font-size: 12px; color: var(--text-muted);">
+                                Formatos aceitos: CSV ou Excel (.xlsx, .xls)
+                            </span>
+                            <div class="file-chosen-info"></div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label" style="font-size: 12px;">Comportamento ao carregar:</label>
+                            <select name="action" class="form-select" style="font-size: 13px; padding: 8px 12px;">
+                                <option value="substituir_data" selected>Substituir registros da mesma data (recomendado)</option>
+                                <option value="append">Adicionar ao final sem apagar anteriores (Append)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%;" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span>Carregar no PostgreSQL</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Card 2: Base Secundária (se houver) -->
+            {% if contrato.tabela_secundaria %}
+            <div id="card-upload-secundaria" class="upload-box" style="border-color: rgba(139, 92, 246, 0.4);">
+                <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                        <h3 style="font-size: 18px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--purple);"></span>
+                            Importar Base Secundária
+                        </h3>
+                        <span class="metric-badge badge-neutral" style="color: var(--purple); border-color: rgba(139, 92, 246, 0.3);">
+                            {{ contrato.tabela_secundaria }}
+                        </span>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+                        Envie o arquivo complementar deste contrato. Destino: <strong>{{ contrato.tabela_secundaria }}</strong>.
+                    </p>
+
+                    <form method="POST" action="{{ url_for('main.importar_base', tipo_base='secundaria') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="contrato_id" value="{{ contrato.id }}">
+
+                        <div class="upload-dropzone">
+                            <input type="file" name="file" accept=".csv, .xlsx, .xls" style="display: none;" required>
+                            <div class="upload-icon" style="color: var(--purple);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                            </div>
+                            <strong style="display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 4px;">
+                                Clique para selecionar ou arraste o arquivo aqui
+                            </strong>
+                            <span style="font-size: 12px; color: var(--text-muted);">
+                                Formatos aceitos: CSV ou Excel (.xlsx, .xls)
+                            </span>
+                            <div class="file-chosen-info"></div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label" style="font-size: 12px;">Comportamento ao carregar:</label>
+                            <select name="action" class="form-select" style="font-size: 13px; padding: 8px 12px;">
+                                <option value="substituir_data" selected>Substituir registros da mesma data (recomendado)</option>
+                                <option value="append">Adicionar ao final sem apagar anteriores (Append)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%; background-color: var(--purple);" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span>Carregar na Base Secundária</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Histórico Recente de Importações -->
+        <div class="card" style="margin-bottom: 0;">
+            <div class="card-title">
+                <span>Histórico de Importações</span>
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Últimas cargas</span>
+            </div>
+
+            {% if historico %}
+            <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                <table class="modern-table" style="font-size: 13px;">
+                    <thead>
+                        <tr>
+                            <th>Data / Hora</th>
+                            <th>Operador</th>
+                            <th>Arquivo</th>
+                            <th style="text-align: right;">Linhas</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in historico %}
+                        <tr>
+                            <td style="color: var(--text-muted); font-size: 12px;">{{ log.criado_em | datetime_br }}</td>
+                            <td><strong style="color: var(--text-primary); font-size: 12px;">{{ log.usuario_nome or 'Sistema' }}</strong></td>
+                            <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; font-size: 12px;" title="{{ log.nome_arquivo }}">{{ log.nome_arquivo }}</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--text-primary);">{{ log.total_linhas | int_br }}</td>
+                            <td>
+                                {% if log.status == 'sucesso' %}
+                                    <span class="metric-badge badge-success" style="font-size: 10px;">Sucesso</span>
+                                {% else %}
+                                    <span class="metric-badge badge-danger" style="font-size: 10px;" title="{{ log.mensagem }}">Erro</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">
+                Nenhuma importação registrada ainda.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- COLUNA DIREITA: TABELA DE TIPOS DE SERVIÇO & VALORES -->
+    <div class="split-col-right">
+        <div class="services-box">
+            <!-- Título e Ações -->
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></span>
+                        Tipos de Serviço & Valores
+                    </h3>
+                    <span style="font-size: 12px; color: var(--text-muted);">
+                        Tabela de precificação do contrato ({{ servicos|length }} serviços)
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <a href="{{ url_for('main.exportar_servicos', contrato_id=contrato.id) }}" class="btn btn-secondary btn-sm" title="Baixar tabela em CSV" style="gap: 6px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>Exportar CSV</span>
+                    </a>
+
+                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('services-upload-drawer').classList.toggle('active')" style="gap: 6px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>Substituir Tabela</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Área Retrátil para Upload / Substituição da Tabela de Serviços -->
+            <div id="services-upload-drawer" style="display: none; background: var(--bg-surface-elevated); border: 1px dashed var(--primary); border-radius: var(--radius-md); padding: 16px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="font-size: 13px; color: var(--text-primary);">Substituir Tabela de Serviços</strong>
+                    <button type="button" onclick="document.getElementById('services-upload-drawer').classList.remove('active')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1;">&times;</button>
+                </div>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+                    Envie a planilha (CSV ou Excel) com as colunas <code>tipo_servico</code> e <code>valor_servico</code>. A tabela anterior deste contrato será <strong>integralmente substituída</strong> pelos novos valores.
+                </p>
+                <form method="POST" action="{{ url_for('main.importar_servicos', contrato_id=contrato.id) }}" enctype="multipart/form-data" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <input type="file" name="file" accept=".csv, .xlsx, .xls" class="form-control" style="font-size: 12px; padding: 6px 10px; flex: 1; min-width: 200px;" required>
+                    <button type="submit" class="btn btn-primary btn-sm">Confirmar Substituição</button>
+                </form>
+            </div>
+
+            <!-- Busca Rápida -->
+            <div style="margin-bottom: 14px; position: relative;">
+                <input type="text" id="service-search-input" placeholder="Filtrar tipo de serviço..." class="form-control" style="padding-left: 36px; font-size: 13px; height: 38px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted);">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+
+            <!-- Tabela com Scroll Suave -->
+            <div class="services-table-wrapper">
+                <table class="modern-table" style="font-size: 13px;">
+                    <thead style="position: sticky; top: 0; background-color: var(--bg-surface); z-index: 10;">
+                        <tr>
+                            <th>Tipo de Serviço</th>
+                            <th style="text-align: right;">Valor Unitário</th>
+                        </tr>
+                    </thead>
+                    <tbody id="services-table-body">
+                        {% for s in servicos %}
+                        <tr>
+                            <td class="service-name" style="font-weight: 600; color: var(--text-primary);">
+                                {{ s.tipo_servico }}
+                            </td>
+                            <td style="text-align: right; font-weight: 800; color: var(--success); white-space: nowrap;">
+                                {{ s.valor_servico | currency }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                                Nenhum tipo de serviço cadastrado para este contrato.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+
+<!-- LAYOUT PADRÃO EM 1 COLUNA (OUTROS CONTRATOS) -->
 <div class="upload-grid">
     <!-- Card 1: Base Principal -->
     <div id="card-upload-principal" class="upload-box">
@@ -160,7 +422,7 @@
         </div>
     </div>
 
-    <!-- Card 2: Base Secundária (Exibido apenas se o contrato possuir) -->
+    <!-- Card 2: Base Secundária (se houver) -->
     {% if contrato.tabela_secundaria %}
     <div id="card-upload-secundaria" class="upload-box" style="border-color: rgba(139, 92, 246, 0.4);">
         <div>
@@ -220,7 +482,7 @@
     {% endif %}
 </div>
 
-<!-- TABELA DE HISTÓRICO DE AUDITORIA -->
+<!-- TABELA DE HISTÓRICO DE AUDITORIA (FULL WIDTH) -->
 <div class="card">
     <div class="card-title">
         <span>Histórico Recente de Importações</span>
@@ -295,6 +557,7 @@
     </div>
     {% endif %}
 </div>
+{% endif %}
 
 {% endif %}
 {% endblock %}

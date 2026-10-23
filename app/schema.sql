@@ -55,6 +55,17 @@ CREATE TABLE IF NOT EXISTS brk_fisca_secundaria (
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 5. Tabela de Tipos de Serviço e Valores por Contrato
+CREATE TABLE IF NOT EXISTS atlas_servicos_valores (
+    id SERIAL PRIMARY KEY,
+    contrato_id INT NOT NULL REFERENCES atlas_contratos(id) ON DELETE CASCADE,
+    tipo_servico VARCHAR(255) NOT NULL,
+    valor_servico NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_contrato_tipo_servico UNIQUE (contrato_id, tipo_servico)
+);
+
 -- Índices para garantir consultas rápidas no painel
 CREATE INDEX IF NOT EXISTS idx_atlas_importacoes_contrato ON atlas_importacoes_log(contrato_id, criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_atlas_usuarios_username ON atlas_usuarios(username);
+CREATE INDEX IF NOT EXISTS idx_atlas_servicos_contrato ON atlas_servicos_valores(contrato_id, tipo_servico);

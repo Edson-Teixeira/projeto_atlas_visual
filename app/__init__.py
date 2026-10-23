@@ -54,4 +54,15 @@ def create_app():
         except Exception:
             return str(val)
 
+    @app.template_filter('currency')
+    def currency_filter(val):
+        if val is None or val == '':
+            return 'R$ 0,00'
+        try:
+            val_f = float(val)
+            formatted = f"{val_f:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            return f"R$ {formatted}"
+        except Exception:
+            return str(val)
+
     return app

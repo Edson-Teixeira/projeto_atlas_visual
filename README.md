@@ -25,7 +25,13 @@ Sistema web com interface moderna (*Dark-First*) desenvolvido em **Python (Flask
    * Opção padrão de **substituição da mesma data**: caso um arquivo do mesmo dia seja enviado novamente, os registros anteriores daquela data são removidos antes da inserção, prevenindo linhas duplicadas no Power BI.
    * Opção alternativa de **Append** direto.
 
-5. **Auditoria e Histórico Completo:**
+5. **Tabela de Tipos de Serviço & Valores (BRK Fiscalização e BRK Hidrômetro):**
+   * **Layout Dividido em 2 Colunas:** Lado esquerdo com as áreas operacionais de carga e histórico; lado direito com a tabela de serviços e valores unitários.
+   * **Exportação Rápida:** Botão para exportar a tabela atual em CSV com delimitador `;` e codificação compatível com Excel.
+   * **Substituição Completa da Tabela:** Permite enviar uma planilha com as colunas `tipo_servico` e `valor_servico`, substituindo integralmente a tabela anterior no banco caso haja correções necessárias.
+   * **Busca Instantânea:** Filtro em tempo real no próprio navegador.
+
+6. **Auditoria e Histórico Completo:**
    * Todas as importações registram: Operador, Data/Hora, Arquivo, Tabela de Destino, Quantidade de Linhas e Status.
 
 ---
