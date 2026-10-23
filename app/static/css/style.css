@@ -164,23 +164,23 @@ body {
 /* CARDS DE MÉTRICAS COMPACTOS / SLIM */
 .metrics-slim-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 16px;
-    margin-bottom: 28px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
 .metric-card-slim {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 14px 20px;
+    border-radius: var(--radius-md);
+    padding: 10px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     transition: var(--transition);
     box-shadow: var(--shadow-sm);
-    min-height: 64px;
+    min-height: 52px;
 }
 
 .metric-card-slim:hover {
@@ -192,20 +192,32 @@ body {
 /* LAYOUT DIVIDIDO EM 2 COLUNAS (PARA BRK FISCALIZACAO E BRK HIDROMETRO) */
 .dashboard-split-layout {
     display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 24px;
-    align-items: start;
-    margin-bottom: 32px;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 16px;
+    align-items: stretch;
+    margin-bottom: 20px;
+}
+
+.split-col-left {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.split-col-right {
+    display: flex;
+    flex-direction: column;
 }
 
 .services-box {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl);
-    padding: 24px;
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 #services-upload-drawer.active {
@@ -214,7 +226,8 @@ body {
 }
 
 .services-table-wrapper {
-    max-height: 540px;
+    flex: 1;
+    max-height: 480px;
     overflow-y: auto;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
@@ -454,16 +467,20 @@ body {
 /* ÁREA DE UPLOAD DRAG & DROP */
 .upload-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-    gap: 24px;
-    margin-bottom: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.split-col-left .upload-grid {
+    margin-bottom: 0;
 }
 
 .upload-box {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl);
-    padding: 28px;
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -480,13 +497,13 @@ body {
 
 .upload-dropzone {
     border: 2px dashed var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 32px 20px;
+    border-radius: var(--radius-md);
+    padding: 14px 12px;
     text-align: center;
     background-color: var(--bg-app);
     cursor: pointer;
     transition: var(--transition);
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     position: relative;
 }
 
@@ -496,30 +513,182 @@ body {
 }
 
 .upload-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: var(--radius-lg);
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md);
     background: var(--bg-surface-elevated);
     color: var(--primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 14px auto;
+    margin: 0 auto 6px auto;
     transition: var(--transition);
 }
 
 .upload-dropzone:hover .upload-icon {
-    transform: scale(1.1);
+    transform: scale(1.05);
     background-color: var(--primary);
     color: #ffffff;
 }
 
 .file-chosen-info {
-    margin-top: 10px;
-    font-size: 13px;
+    margin-top: 8px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--success);
     word-break: break-all;
+}
+
+/* ADMIN LAYOUT COM SIDEBAR */
+.admin-layout {
+    display: flex;
+    min-height: calc(100vh - 72px);
+    width: 100%;
+}
+
+.admin-sidebar {
+    width: 250px;
+    background-color: var(--bg-surface);
+    border-right: 1px solid var(--border-color);
+    padding: 24px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 72px;
+    height: calc(100vh - 72px);
+}
+
+.admin-sidebar .nav-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    padding: 8px 12px 4px 12px;
+}
+
+.admin-sidebar .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.admin-sidebar .nav-item:hover {
+    background-color: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    transform: translateX(2px);
+}
+
+.admin-sidebar .nav-item.active {
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 700;
+    border-left: 3px solid var(--primary);
+}
+
+.admin-content {
+    flex: 1;
+    padding: 28px 32px;
+    min-width: 0;
+    max-width: 1400px;
+}
+
+/* CARDS DE STATUS DE CONTRATOS DO ADMIN */
+.contracts-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.contract-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+
+.contract-card.status-done {
+    border-top: 3px solid var(--success);
+}
+
+.contract-card.status-pending {
+    border-top: 3px solid var(--warning);
+}
+
+.contract-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-hover);
+}
+
+.contract-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.contract-card-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.contract-card-code {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+.contract-card-meta {
+    background-color: var(--bg-app);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.contract-card-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+@media (max-width: 900px) {
+    .admin-layout {
+        flex-direction: column;
+    }
+    .admin-sidebar {
+        width: 100%;
+        height: auto;
+        position: static;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 12px;
+    }
+    .admin-content {
+        padding: 16px;
+    }
 }
 
 /* TABELAS MODERNAS */

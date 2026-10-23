@@ -1,0 +1,250 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Usuários & Senhas - Atlas Sistema{% endblock %}
+
+{% block admin_content %}
+<!-- CABEÇALHO -->
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2 style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">
+            Gestão de Usuários & Senhas
+        </h2>
+        <p style="font-size: 14px; color: var(--text-secondary);">
+            Criação de novos acessos, vinculação a contratos operacionais e redefinição de senhas.
+        </p>
+    </div>
+
+    <button type="button" class="btn btn-primary" onclick="toggleNovoUsuarioCard()" style="gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Novo Usuário</span>
+    </button>
+</div>
+
+<!-- CARD DE NOVO USUÁRIO (ANINHADO / EXPANSÍVEL) -->
+<div id="card-novo-usuario" class="card" style="display: none; border: 1px solid var(--primary); margin-bottom: 24px; background: var(--bg-surface-elevated);">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <line x1="19" y1="8" x2="19" y2="14"></line>
+                    <line x1="22" y1="11" x2="16" y2="11"></line>
+                </svg>
+            </div>
+            <div>
+                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Cadastrar Novo Usuário</h3>
+                <span style="font-size: 12px; color: var(--text-muted);">Preencha os dados de acesso para o novo operador ou administrador.</span>
+            </div>
+        </div>
+        <button type="button" onclick="toggleNovoUsuarioCard()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; line-height: 1;">&times;</button>
+    </div>
+
+    <form method="POST" action="{{ url_for('main.admin_criar_usuario') }}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Nome Completo *</label>
+                <input type="text" name="nome" class="form-control" placeholder="Ex: Lucas Ribeiro" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Nome de Usuário (Login) *</label>
+                <input type="text" name="username" class="form-control" placeholder="Ex: lucas.ribeiro" autocomplete="off" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Senha Inicial *</label>
+                <input type="password" name="password" class="form-control" placeholder="Mínimo 6 caracteres" minlength="6" autocomplete="new-password" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Contrato Vinculado</label>
+                <select name="contrato_id" id="novo_contrato_select" class="form-select">
+                    <option value="">Nenhum (Administrador Global)</option>
+                    {% for c in todos_contratos_sidebar %}
+                        <option value="{{ c.id }}">{{ c.nome_exibicao }} ({{ c.codigo }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 12px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; color: var(--text-secondary);">
+                <input type="checkbox" name="is_admin" value="1" id="novo_is_admin_check" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                <span>Conceder privilégios de <strong>Administrador do Sistema</strong></span>
+            </label>
+
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleNovoUsuarioCard()">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm">Salvar e Criar Acesso</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- TABELA DE USUÁRIOS CADASTRADOS -->
+<div class="card">
+    <div class="card-title">
+        <span>Usuários Cadastrados</span>
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">
+            {{ usuarios|length }} usuário(s) no total
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>Login</th>
+                    <th>Perfil</th>
+                    <th>Contrato Vinculado</th>
+                    <th>Status</th>
+                    <th>Criado Em</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--primary);">
+                                {{ u.nome[:2].upper() }}
+                            </div>
+                            <strong style="color: var(--text-primary); font-size: 14px;">{{ u.nome }}</strong>
+                        </div>
+                    </td>
+                    <td>
+                        <code style="font-size: 12px; color: var(--primary); background: var(--bg-surface-elevated); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border-color);">
+                            {{ u.username }}
+                        </code>
+                    </td>
+                    <td>
+                        {% if u.is_admin %}
+                            <span class="metric-badge badge-warning" style="font-size: 11px;">Administrador</span>
+                        {% else %}
+                            <span class="metric-badge badge-neutral" style="font-size: 11px;">Operador</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.contrato_nome %}
+                            <span class="metric-badge badge-info" style="font-size: 11px;">{{ u.contrato_nome }}</span>
+                        {% else %}
+                            <span style="font-size: 12px; color: var(--text-muted);">Geral / Todos</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.ativo %}
+                            <span class="metric-badge badge-success" style="font-size: 11px;">Ativo</span>
+                        {% else %}
+                            <span class="metric-badge badge-danger" style="font-size: 11px;">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 12px; color: var(--text-muted);">
+                        {{ u.criado_em | datetime_br if u.criado_em else '-' }}
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; align-items: center; gap: 6px;">
+                            <!-- Botão Alterar Senha -->
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalSenha({{ u.id }}, '{{ u.nome|escape }}', '{{ u.username|escape }}')" style="font-size: 11px; padding: 4px 10px; gap: 4px;" title="Alterar Senha">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                                <span>Alterar Senha</span>
+                            </button>
+
+                            <!-- Botão Ativar / Desativar -->
+                            {% if u.id != user.id %}
+                            <form method="POST" action="{{ url_for('main.admin_toggle_usuario', user_id=u.id) }}" style="display: inline;" onsubmit="return confirm('Deseja realmente {% if u.ativo %}desativar{% else %}reativar{% endif %} este usuário?');">
+                                <button type="submit" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" title="{% if u.ativo %}Desativar{% else %}Reativar{% endif %}">
+                                    {% if u.ativo %}
+                                        <span style="color: var(--danger);">Desativar</span>
+                                    {% else %}
+                                        <span style="color: var(--success);">Ativar</span>
+                                    {% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL PARA ALTERAR SENHA -->
+<div id="modal-alterar-senha" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="width: 100%; max-width: 440px; margin: 0; border: 1px solid var(--primary); box-shadow: 0 20px 40px rgba(0,0,0,0.5); animation: fadeIn 0.2s ease;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 6px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <strong style="font-size: 16px; color: var(--text-primary);">Alterar Senha</strong>
+            </div>
+            <button type="button" onclick="fecharModalSenha()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 22px; line-height: 1;">&times;</button>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Defina uma nova senha para o usuário <strong id="modal-user-nome" style="color: var(--text-primary);"></strong> (<code id="modal-user-login" style="color: var(--primary);"></code>).
+        </p>
+
+        <form id="form-alterar-senha" method="POST" action="">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label">Nova Senha *</label>
+                <input type="password" name="nova_senha" id="input-nova-senha" class="form-control" placeholder="Mínimo 6 caracteres" minlength="6" required autocomplete="new-password">
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalSenha()">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm">Salvar Nova Senha</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleNovoUsuarioCard() {
+    const card = document.getElementById('card-novo-usuario');
+    if (card.style.display === 'none' || !card.style.display) {
+        card.style.display = 'block';
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        card.style.display = 'none';
+    }
+}
+
+function abrirModalSenha(userId, nome, username) {
+    const modal = document.getElementById('modal-alterar-senha');
+    const form = document.getElementById('form-alterar-senha');
+    document.getElementById('modal-user-nome').innerText = nome;
+    document.getElementById('modal-user-login').innerText = username;
+    form.action = `/admin/usuarios/${userId}/senha`;
+    modal.style.display = 'flex';
+    document.getElementById('input-nova-senha').value = '';
+    document.getElementById('input-nova-senha').focus();
+}
+
+function fecharModalSenha() {
+    document.getElementById('modal-alterar-senha').style.display = 'none';
+}
+
+// Fechar modal ao clicar fora
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('modal-alterar-senha');
+    if (e.target === modal) {
+        fecharModalSenha();
+    }
+});
+</script>
+{% endblock %}

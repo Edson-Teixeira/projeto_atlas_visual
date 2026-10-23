@@ -210,5 +210,89 @@ class AtlasSistemaTestCase(unittest.TestCase):
         from scripts.init_db import init_database
         init_database()
 
+    def test_admin_dashboard_renders_contracts_status_and_no_upload_box(self):
+        # 1. Login com admin
+        self.client.post('/login', data={'username': 'admin', 'password': 'admin123'})
+        resp = self.client.get('/dashboard')
+        self.assertEqual(resp.status_code, 200)
+
+        # Deve mostrar o Painel Admin com status dos contratos
+        self.assertIn(b"Status Operacional dos Contratos", resp.data)
+        self.assertIn(b"contracts-status-grid", resp.data)
+        self.assertIn(b"BRK Fiscaliza", resp.data)
+        self.assertIn(b"BRK Hidr", resp.data)
+
+        # Aba lateral
+        self.assertIn(b"admin-sidebar", resp.data)
+        self.assertIn(b"Usu\xc3\xa1rios & Senhas", resp.data)
+        self.assertIn(b"Hist\xc3\xb3rico de Envios", resp.data)
+
+        # NÃO deve conter as caixas de upload de importação diária nem tabela de valores na tela principal do admin!
+        self.assertNotIn(b'id="card-upload-principal"', resp.data)
+        self.assertNotIn(b'id="card-upload-secundaria"', resp.data)
+        self.assertNotIn(b'Tipos de Servi\xc3\xa7o & Valores', resp.data)
+
+    def test_admin_usuarios_management(self):
+        # 1. Login com admin
+        self.client.post('/login', data={'username': 'admin', 'password': 'admin123'})
+        resp = self.client.get('/admin/usuarios')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Gest\xc3\xa3o de Usu\xc3\xa1rios & Senhas", resp.data)
+
+        # 2. Criar novo usuário para teste
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        resp_create = self.client.post('/admin/usuarios/novo', data={
+            'nome': 'Operador Teste Automatizado',
+            'username': 'op_teste_aut',
+            'password': 'senha_antiga_123',
+            'contrato_id': str(contrato['id']),
+            'is_admin': ''
+        }, follow_redirects=True)
+        self.assertEqual(resp_create.status_code, 200)
+        self.assertIn(b"op_teste_aut", resp_create.data)
+
+        # Verifica se o novo usuário consegue logar
+        novo_user = query_one("SELECT id FROM atlas_usuarios WHERE username = 'op_teste_aut'")
+        self.assertIsNotNone(novo_user)
+
+        self.client.get('/logout')
+        resp_login_ok = self.client.post('/login', data={'username': 'op_teste_aut', 'password': 'senha_antiga_123'}, follow_redirects=True)
+        self.assertEqual(resp_login_ok.status_code, 200)
+        self.assertIn(b"BRK Fiscaliza", resp_login_ok.data)
+
+        # 3. Alterar a senha desse usuário pelo Admin
+        self.client.get('/logout')
+        self.client.post('/login', data={'username': 'admin', 'password': 'admin123'})
+        resp_pwd = self.client.post(f"/admin/usuarios/{novo_user['id']}/senha", data={
+            'nova_senha': 'senha_super_nova_999'
+        }, follow_redirects=True)
+        self.assertEqual(resp_pwd.status_code, 200)
+        self.assertIn(b"alterada com sucesso", resp_pwd.data)
+
+        # 4. Testa login com a nova senha
+        self.client.get('/logout')
+        resp_new_login = self.client.post('/login', data={'username': 'op_teste_aut', 'password': 'senha_super_nova_999'}, follow_redirects=True)
+        self.assertEqual(resp_new_login.status_code, 200)
+        self.assertIn(b"BRK Fiscaliza", resp_new_login.data)
+
+        # Limpeza do usuário de teste
+        execute("DELETE FROM atlas_usuarios WHERE username = 'op_teste_aut';")
+
+    def test_admin_historico_page(self):
+        self.client.post('/login', data={'username': 'admin', 'password': 'admin123'})
+        resp = self.client.get('/admin/historico')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Hist\xc3\xb3rico Consolidado de Envios", resp.data)
+        self.assertIn(b"Registro de Importa\xc3\xa7\xc3\xb5es", resp.data)
+
+    def test_admin_ver_contrato_preview(self):
+        self.client.post('/login', data={'username': 'admin', 'password': 'admin123'})
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        resp = self.client.get(f"/admin/contrato/{contrato['id']}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Vis\xc3\xa3o do Administrador", resp.data)
+        self.assertIn(b"Voltar ao Painel Admin", resp.data)
+        self.assertIn(b'id="card-upload-principal"', resp.data)
+
 if __name__ == '__main__':
     unittest.main()

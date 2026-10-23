@@ -1,0 +1,182 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Painel do Administrador - Atlas Sistema{% endblock %}
+
+{% block admin_content %}
+<!-- CABEÇALHO DO PAINEL ADMIN -->
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2 style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">
+            Status Operacional dos Contratos
+        </h2>
+        <p style="font-size: 14px; color: var(--text-secondary);">
+            Acompanhamento centralizado do envio diário de bases e integridade do PostgreSQL.
+        </p>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="metric-badge badge-success" style="font-size: 12px; padding: 6px 14px;">
+            ● {{ total_enviados_hoje }} Cargas Realizadas Hoje
+        </span>
+        {% if total_pendentes_hoje > 0 %}
+        <span class="metric-badge badge-warning" style="font-size: 12px; padding: 6px 14px;">
+            ● {{ total_pendentes_hoje }} Contratos Pendentes
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- GRID COM O STATUS DE ENVIO DE CADA CONTRATO -->
+<div class="contracts-status-grid">
+    {% for cs in contratos_status %}
+    {% set c = cs.contrato %}
+    <div class="contract-card {% if cs.carga_hoje %}status-done{% else %}status-pending{% endif %}">
+        <div>
+            <div class="contract-card-header">
+                <div>
+                    <h3 class="contract-card-title">{{ c.nome_exibicao }}</h3>
+                    <span class="contract-card-code">{{ c.codigo }}</span>
+                </div>
+                <div>
+                    {% if cs.carga_hoje %}
+                        <span class="metric-badge badge-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Carga Realizada
+                        </span>
+                    {% else %}
+                        <span class="metric-badge badge-warning">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            Pendente Hoje
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Informações detalhadas do contrato -->
+            <div class="contract-card-meta" style="margin-top: 16px;">
+                <div class="contract-card-meta-row">
+                    <span style="color: var(--text-muted);">Envio de Hoje:</span>
+                    {% if cs.carga_hoje and cs.info_hoje %}
+                        <span style="font-weight: 600; color: var(--success);">
+                            {{ cs.info_hoje.criado_em | datetime_br }}
+                        </span>
+                    {% else %}
+                        <span style="color: var(--warning); font-weight: 600;">Aguardando envio</span>
+                    {% endif %}
+                </div>
+
+                <div class="contract-card-meta-row">
+                    <span style="color: var(--text-muted);">Última Carga Geral:</span>
+                    <span style="font-weight: 500; color: var(--text-primary);">
+                        {% if cs.ultima_carga %}
+                            {{ cs.ultima_carga.criado_em | datetime_br }} ({{ cs.ultima_carga.total_linhas | int_br }} linhas)
+                        {% else %}
+                            Nenhum envio
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="contract-card-meta-row">
+                    <span style="color: var(--text-muted);">Operador do Envio:</span>
+                    <span style="font-weight: 600; color: var(--text-secondary);">
+                        {% if cs.carga_hoje and cs.info_hoje %}
+                            {{ cs.info_hoje.user_nome or 'Operador' }}
+                        {% elif cs.ultima_carga %}
+                            {{ cs.ultima_carga.user_nome or '-' }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="contract-card-meta-row" style="border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                    <span style="color: var(--text-muted);">Total Acumulado no Banco:</span>
+                    <strong style="color: var(--text-primary);">{{ cs.total_linhas | int_br }} registros</strong>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 12px;">
+            <span style="font-size: 11px; color: var(--text-muted);">
+                {{ cs.total_usuarios }} operador(es) cadastrado(s)
+            </span>
+            <a href="{{ url_for('main.admin_ver_contrato', contrato_id=c.id) }}" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 10px; gap: 4px;">
+                <span>Visão do Operador</span>
+                <span>&rarr;</span>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- TABELA DE HISTÓRICO GERAL DE ENVIOS -->
+<div class="card">
+    <div class="card-title">
+        <span>Histórico Consolidado de Envios</span>
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">
+            Últimas cargas de todos os contratos
+        </span>
+    </div>
+
+    {% if historico_global %}
+    <div class="table-responsive">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Data / Hora</th>
+                    <th>Contrato</th>
+                    <th>Operador</th>
+                    <th>Tabela</th>
+                    <th>Arquivo</th>
+                    <th style="text-align: right;">Linhas</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in historico_global %}
+                <tr>
+                    <td style="color: var(--text-muted); font-size: 13px;">
+                        {{ log.criado_em | datetime_br }}
+                    </td>
+                    <td>
+                        <strong style="color: var(--text-primary);">{{ log.contrato_nome or log.contrato_codigo }}</strong>
+                    </td>
+                    <td>
+                        <span style="color: var(--text-secondary);">{{ log.usuario_nome or 'Sistema' }}</span>
+                    </td>
+                    <td>
+                        <span class="metric-badge badge-neutral" style="font-size: 11px;">
+                            {{ log.tabela_destino }}
+                        </span>
+                    </td>
+                    <td style="max-width: 240px; overflow: hidden; text-overflow: ellipsis;" title="{{ log.nome_arquivo }}">
+                        {{ log.nome_arquivo }}
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: var(--text-primary);">
+                        {{ log.total_linhas | int_br }}
+                    </td>
+                    <td>
+                        {% if log.status == 'sucesso' %}
+                            <span class="metric-badge badge-success">Sucesso</span>
+                        {% else %}
+                            <span class="metric-badge badge-danger" title="{{ log.mensagem }}">Erro</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+        Nenhum envio registrado até o momento.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

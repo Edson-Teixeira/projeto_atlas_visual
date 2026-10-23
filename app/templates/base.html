@@ -67,6 +67,7 @@
         </header>
 
         <!-- Conteúdo -->
+        {% block page_layout %}
         <main class="content-wrapper">
             <!-- Alertas Flash -->
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -83,6 +84,7 @@
 
             {% block content %}{% endblock %}
         </main>
+        {% endblock %}
     </div>
     {% endblock %}
 </body>

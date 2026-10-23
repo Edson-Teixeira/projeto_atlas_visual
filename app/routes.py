@@ -1,12 +1,31 @@
 import io
 import csv
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, Response
 from datetime import date
-from app.auth import login_required, get_current_user
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, Response
+from werkzeug.security import generate_password_hash
+from app.auth import login_required, admin_required, get_current_user
 from app.db import get_db, query_one, query_all
 from app.importer import process_and_import
 
 main_bp = Blueprint('main', __name__)
+
+def count_table_rows(table_name):
+    """Conta registros de forma segura checando a existência da tabela."""
+    if not table_name:
+        return 0
+    try:
+        exists = query_one("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_name = %s
+            ) as exists
+        """, (table_name,))
+        if exists and exists['exists']:
+            row = query_one(f'SELECT COUNT(*) as c FROM "{table_name}"')
+            return row['c'] if row else 0
+        return 0
+    except Exception:
+        return 0
 
 @main_bp.route('/')
 @login_required
@@ -20,22 +39,98 @@ def dashboard():
     if not user:
         return redirect(url_for('auth.logout'))
 
-    # Se for admin e tiver parâmetro ?contrato_id=, permite alternar visualização
-    contrato_id = request.args.get('contrato_id', type=int)
-    todos_contratos = []
-
+    # Se for Administrador, abre DIRETAMENTE o Dashboard Executivo do Admin
     if user['is_admin']:
-        todos_contratos = query_all("SELECT id, codigo, nome_exibicao FROM atlas_contratos WHERE ativo = TRUE ORDER BY nome_exibicao")
-        if not contrato_id:
-            # Se não especificou, pega o do usuário ou o primeiro da lista
-            contrato_id = user['contrato_id'] or (todos_contratos[0]['id'] if todos_contratos else None)
-    else:
-        contrato_id = user['contrato_id']
+        return render_admin_dashboard(user)
 
+    # Se for Operador de Contrato:
+    contrato_id = user['contrato_id']
     if not contrato_id:
         flash("Nenhum contrato vinculado a este usuário.", "warning")
         return render_template('dashboard.html', user=user, contrato=None)
 
+    return render_operator_dashboard(user, contrato_id)
+
+def render_admin_dashboard(user):
+    """Renderiza a tela de status de cada contrato e histórico global para o Administrador."""
+    todos_contratos = query_all("""
+        SELECT id, codigo, nome_exibicao, tabela_principal, tabela_secundaria 
+        FROM atlas_contratos 
+        WHERE ativo = TRUE 
+        ORDER BY nome_exibicao
+    """)
+    
+    contratos_status = []
+    total_enviados_hoje = 0
+    total_pendentes_hoje = 0
+
+    for c in todos_contratos:
+        # Carga realizada hoje?
+        info_hoje = query_one("""
+            SELECT l.id, l.criado_em, l.total_linhas, u.nome as user_nome
+            FROM atlas_importacoes_log l
+            LEFT JOIN atlas_usuarios u ON l.usuario_id = u.id
+            WHERE l.contrato_id = %s AND DATE(l.criado_em) = CURRENT_DATE AND l.status = 'sucesso'
+            ORDER BY l.criado_em DESC
+            LIMIT 1
+        """, (c['id'],))
+
+        # Última carga em qualquer data
+        ultima_carga = query_one("""
+            SELECT l.id, l.criado_em, l.total_linhas, l.status, u.nome as user_nome
+            FROM atlas_importacoes_log l
+            LEFT JOIN atlas_usuarios u ON l.usuario_id = u.id
+            WHERE l.contrato_id = %s
+            ORDER BY l.criado_em DESC
+            LIMIT 1
+        """, (c['id'],))
+
+        # Total acumulado na tabela principal
+        total_acumulado = count_table_rows(c['tabela_principal'])
+
+        # Total de operadores vinculados a esse contrato
+        users_count = query_one("SELECT COUNT(*) as c FROM atlas_usuarios WHERE contrato_id = %s", (c['id'],))
+        total_usuarios = users_count['c'] if users_count else 0
+
+        carga_hoje = bool(info_hoje)
+        if carga_hoje:
+            total_enviados_hoje += 1
+        else:
+            total_pendentes_hoje += 1
+
+        contratos_status.append({
+            'contrato': c,
+            'carga_hoje': carga_hoje,
+            'info_hoje': info_hoje,
+            'ultima_carga': ultima_carga,
+            'total_linhas': total_acumulado,
+            'total_usuarios': total_usuarios
+        })
+
+    # Histórico recente global consolidado
+    historico_global = query_all("""
+        SELECT l.id, l.tipo_base, l.tabela_destino, l.nome_arquivo, l.total_linhas,
+               l.data_referencia, l.acao, l.status, l.mensagem, l.criado_em,
+               u.nome as usuario_nome, c.nome_exibicao as contrato_nome, c.codigo as contrato_codigo
+        FROM atlas_importacoes_log l
+        LEFT JOIN atlas_usuarios u ON l.usuario_id = u.id
+        LEFT JOIN atlas_contratos c ON l.contrato_id = c.id
+        ORDER BY l.criado_em DESC
+        LIMIT 30
+    """)
+
+    return render_template(
+        'admin/dashboard.html',
+        user=user,
+        contratos_status=contratos_status,
+        total_enviados_hoje=total_enviados_hoje,
+        total_pendentes_hoje=total_pendentes_hoje,
+        historico_global=historico_global,
+        todos_contratos_sidebar=todos_contratos
+    )
+
+def render_operator_dashboard(user, contrato_id, is_admin_preview=False):
+    """Renderiza a visão de operador para um contrato específico."""
     contrato = query_one("""
         SELECT id, codigo, nome_exibicao, tabela_principal, tabela_secundaria, coluna_data, criado_em
         FROM atlas_contratos
@@ -46,7 +141,7 @@ def dashboard():
         flash("Contrato não encontrado.", "danger")
         return render_template('dashboard.html', user=user, contrato=None)
 
-    # Informações da última importação
+    # Informações da última importação deste contrato
     ultima_importacao = query_one("""
         SELECT l.id, l.tipo_base, l.tabela_destino, l.nome_arquivo, l.total_linhas,
                l.data_referencia, l.status, l.mensagem, l.criado_em, u.nome as usuario_nome
@@ -57,14 +152,14 @@ def dashboard():
         LIMIT 1
     """, (contrato['id'],))
 
-    # Verificação de status de hoje (se houve carga hoje)
+    # Carga de hoje
     carga_hoje = query_one("""
         SELECT id FROM atlas_importacoes_log
         WHERE contrato_id = %s AND DATE(criado_em) = CURRENT_DATE AND status = 'sucesso'
         LIMIT 1
     """, (contrato['id'],))
 
-    # Histórico recente das últimas 10 importações
+    # Histórico recente das últimas cargas
     historico_importacoes = query_all("""
         SELECT l.id, l.tipo_base, l.tabela_destino, l.nome_arquivo, l.total_linhas,
                l.data_referencia, l.acao, l.status, l.mensagem, l.criado_em,
@@ -87,6 +182,10 @@ def dashboard():
             ORDER BY tipo_servico ASC
         """, (contrato['id'],))
 
+    todos_contratos = []
+    if user['is_admin']:
+        todos_contratos = query_all("SELECT id, codigo, nome_exibicao FROM atlas_contratos WHERE ativo = TRUE ORDER BY nome_exibicao")
+
     return render_template(
         'dashboard.html',
         user=user,
@@ -97,8 +196,144 @@ def dashboard():
         historico=historico_importacoes,
         has_services=has_services,
         servicos=servicos,
+        is_admin_preview=is_admin_preview,
         today=date.today().isoformat()
     )
+
+@main_bp.route('/admin/contrato/<int:contrato_id>')
+@admin_required
+def admin_ver_contrato(contrato_id):
+    """Permite ao administrador inspecionar a visão operacional de um contrato."""
+    user = get_current_user()
+    return render_operator_dashboard(user, contrato_id, is_admin_preview=True)
+
+# ----------------- ADMIN: GESTÃO DE USUÁRIOS E SENHAS -----------------
+
+@main_bp.route('/admin/usuarios', methods=['GET'])
+@admin_required
+def admin_usuarios():
+    user = get_current_user()
+    usuarios = query_all("""
+        SELECT u.id, u.nome, u.username, u.contrato_id, u.is_admin, u.ativo, u.criado_em,
+               c.nome_exibicao as contrato_nome, c.codigo as contrato_codigo
+        FROM atlas_usuarios u
+        LEFT JOIN atlas_contratos c ON u.contrato_id = c.id
+        ORDER BY u.is_admin DESC, u.nome ASC
+    """)
+    todos_contratos = query_all("SELECT id, codigo, nome_exibicao, tabela_principal FROM atlas_contratos WHERE ativo = TRUE ORDER BY nome_exibicao")
+    
+    return render_template(
+        'admin/usuarios.html',
+        user=user,
+        usuarios=usuarios,
+        todos_contratos_sidebar=todos_contratos
+    )
+
+@main_bp.route('/admin/usuarios/novo', methods=['POST'])
+@admin_required
+def admin_criar_usuario():
+    nome = request.form.get('nome', '').strip()
+    username = request.form.get('username', '').strip().lower()
+    password = request.form.get('password', '')
+    contrato_id = request.form.get('contrato_id', type=int) or None
+    is_admin = bool(request.form.get('is_admin'))
+
+    if not nome or not username or not password:
+        flash("Todos os campos obrigatórios devem ser preenchidos.", "danger")
+        return redirect(url_for('main.admin_usuarios'))
+
+    if len(password) < 6:
+        flash("A senha deve conter no mínimo 6 caracteres.", "warning")
+        return redirect(url_for('main.admin_usuarios'))
+
+    # Verifica se username já existe
+    existente = query_one("SELECT id FROM atlas_usuarios WHERE username = %s", (username,))
+    if existente:
+        flash(f"O nome de usuário '{username}' já está em uso.", "danger")
+        return redirect(url_for('main.admin_usuarios'))
+
+    pwd_hash = generate_password_hash(password)
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO atlas_usuarios (nome, username, password_hash, contrato_id, is_admin, ativo)
+                VALUES (%s, %s, %s, %s, %s, TRUE)
+            """, (nome, username, pwd_hash, contrato_id, is_admin))
+
+    flash(f"✅ Usuário '{nome}' (@{username}) criado com sucesso!", "success")
+    return redirect(url_for('main.admin_usuarios'))
+
+@main_bp.route('/admin/usuarios/<int:user_id>/senha', methods=['POST'])
+@admin_required
+def admin_alterar_senha(user_id):
+    nova_senha = request.form.get('nova_senha', '').strip()
+    if not nova_senha or len(nova_senha) < 6:
+        flash("A nova senha deve ter no mínimo 6 caracteres.", "warning")
+        return redirect(url_for('main.admin_usuarios'))
+
+    alvo = query_one("SELECT id, nome, username FROM atlas_usuarios WHERE id = %s", (user_id,))
+    if not alvo:
+        flash("Usuário não encontrado.", "danger")
+        return redirect(url_for('main.admin_usuarios'))
+
+    pwd_hash = generate_password_hash(nova_senha)
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE atlas_usuarios SET password_hash = %s WHERE id = %s", (pwd_hash, user_id))
+
+    flash(f"✅ Senha do usuário '{alvo['nome']}' alterada com sucesso!", "success")
+    return redirect(url_for('main.admin_usuarios'))
+
+@main_bp.route('/admin/usuarios/<int:user_id>/toggle', methods=['POST'])
+@admin_required
+def admin_toggle_usuario(user_id):
+    user = get_current_user()
+    if user['id'] == user_id:
+        flash("Você não pode desativar seu próprio usuário.", "warning")
+        return redirect(url_for('main.admin_usuarios'))
+
+    alvo = query_one("SELECT id, nome, ativo FROM atlas_usuarios WHERE id = %s", (user_id,))
+    if not alvo:
+        flash("Usuário não encontrado.", "danger")
+        return redirect(url_for('main.admin_usuarios'))
+
+    novo_status = not alvo['ativo']
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE atlas_usuarios SET ativo = %s WHERE id = %s", (novo_status, user_id))
+
+    status_str = "ativado" if novo_status else "desativado"
+    flash(f"Usuário '{alvo['nome']}' foi {status_str}.", "info")
+    return redirect(url_for('main.admin_usuarios'))
+
+# ----------------- ADMIN: HISTÓRICO CONSOLIDADO -----------------
+
+@main_bp.route('/admin/historico', methods=['GET'])
+@admin_required
+def admin_historico():
+    user = get_current_user()
+    todos_contratos = query_all("SELECT id, codigo, nome_exibicao FROM atlas_contratos WHERE ativo = TRUE ORDER BY nome_exibicao")
+    
+    historico = query_all("""
+        SELECT l.id, l.tipo_base, l.tabela_destino, l.nome_arquivo, l.total_linhas,
+               l.data_referencia, l.acao, l.status, l.mensagem, l.criado_em,
+               u.nome as usuario_nome, c.nome_exibicao as contrato_nome, c.codigo as contrato_codigo
+        FROM atlas_importacoes_log l
+        LEFT JOIN atlas_usuarios u ON l.usuario_id = u.id
+        LEFT JOIN atlas_contratos c ON l.contrato_id = c.id
+        ORDER BY l.criado_em DESC
+        LIMIT 200
+    """)
+
+    return render_template(
+        'admin/historico.html',
+        user=user,
+        historico=historico,
+        todos_contratos_sidebar=todos_contratos
+    )
+
+# ----------------- OPERAÇÕES DE IMPORTAÇÃO & SERVIÇOS -----------------
 
 @main_bp.route('/importar/<tipo_base>', methods=['POST'])
 @login_required
@@ -110,7 +345,7 @@ def importar_base(tipo_base):
     user = get_current_user()
     contrato_id = request.form.get('contrato_id', type=int)
 
-    # Segurança: usuário não-admin só pode importar para o seu próprio contrato
+    # Segurança: operador comum só pode importar para o seu próprio contrato
     if not user['is_admin']:
         contrato_id = user['contrato_id']
 
@@ -125,20 +360,22 @@ def importar_base(tipo_base):
         target_table = contrato['tabela_secundaria']
         if not target_table:
             flash("Este contrato não possui base secundária configurada.", "warning")
-            return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+            dest = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
+            return redirect(dest)
 
     if 'file' not in request.files:
         flash("Nenhum arquivo enviado.", "danger")
-        return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+        dest = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
+        return redirect(dest)
 
     file = request.files['file']
     if file.filename == '':
         flash("Nenhum arquivo selecionado.", "danger")
-        return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+        dest = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
+        return redirect(dest)
 
     action = request.form.get('action', 'substituir_data')
 
-    # Executa a importação
     res = process_and_import(
         file_storage=file,
         filename=file.filename,
@@ -155,7 +392,8 @@ def importar_base(tipo_base):
     else:
         flash(f"❌ {res['message']}", "danger")
 
-    return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+    dest = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
+    return redirect(dest)
 
 @main_bp.route('/servicos/exportar/<int:contrato_id>')
 @login_required
@@ -177,7 +415,6 @@ def exportar_servicos(contrato_id):
         ORDER BY tipo_servico ASC
     """, (contrato_id,))
 
-    # Gera CSV com delimitador ';' e UTF-8 com BOM para abrir perfeitamente no Excel
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';')
     writer.writerow(['tipo_servico', 'valor_servico'])
@@ -207,26 +444,26 @@ def importar_servicos(contrato_id):
         flash("Contrato não encontrado.", "danger")
         return redirect(url_for('main.dashboard'))
 
+    dest_redirect = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
+
     if 'file' not in request.files:
         flash("Nenhum arquivo enviado.", "danger")
-        return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+        return redirect(dest_redirect)
 
     file = request.files['file']
     if file.filename == '':
         flash("Nenhum arquivo selecionado.", "danger")
-        return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+        return redirect(dest_redirect)
 
     try:
         from app.importer import read_uploaded_file, normalize_column_name
         df = read_uploaded_file(file, file.filename)
         if df.empty:
             flash("O arquivo de serviços enviado está vazio.", "warning")
-            return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+            return redirect(dest_redirect)
 
-        # Normaliza colunas
         df.columns = [normalize_column_name(c) for c in df.columns]
 
-        # Encontra coluna de tipo/serviço e valor
         col_tipo = None
         for c in df.columns:
             if c in ('tipo_servico', 'tipo_de_servico', 'servico', 'descricao', 'nome'):
@@ -241,7 +478,7 @@ def importar_servicos(contrato_id):
 
         if not col_tipo or not col_valor:
             flash("O arquivo precisa conter colunas identificáveis como 'tipo_servico' e 'valor_servico'.", "danger")
-            return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+            return redirect(dest_redirect)
 
         novos_servicos = []
         for _, row in df.iterrows():
@@ -265,9 +502,8 @@ def importar_servicos(contrato_id):
 
         if not novos_servicos:
             flash("Nenhum serviço válido identificado no arquivo.", "warning")
-            return redirect(url_for('main.dashboard', contrato_id=contrato_id))
+            return redirect(dest_redirect)
 
-        # Substitui a tabela do contrato atomicamente
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("DELETE FROM atlas_servicos_valores WHERE contrato_id = %s", (contrato_id,))
@@ -301,5 +537,4 @@ def importar_servicos(contrato_id):
     except Exception as e:
         flash(f"❌ Erro ao atualizar tabela de serviços: {str(e)}", "danger")
 
-    return redirect(url_for('main.dashboard', contrato_id=contrato_id))
-
+    return redirect(dest_redirect)

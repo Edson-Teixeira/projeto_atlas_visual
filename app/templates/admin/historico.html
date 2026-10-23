@@ -1,0 +1,134 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Histórico Geral de Envios - Atlas Sistema{% endblock %}
+
+{% block admin_content %}
+<!-- CABEÇALHO -->
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2 style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">
+            Histórico Consolidado de Envios
+        </h2>
+        <p style="font-size: 14px; color: var(--text-secondary);">
+            Auditoria completa de todas as cargas diárias e substituições no PostgreSQL de todos os contratos.
+        </p>
+    </div>
+
+    <!-- Filtro Rápido por Contrato -->
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Filtrar por Contrato:</span>
+        <select id="filtro-contrato-select" class="form-select" onchange="filtrarHistorico()" style="font-size: 13px; padding: 6px 12px; min-width: 180px;">
+            <option value="todos">Todos os Contratos</option>
+            {% for c in todos_contratos_sidebar %}
+                <option value="{{ c.codigo }}">{{ c.nome_exibicao }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- TABELA DE HISTÓRICO GLOBAL -->
+<div class="card">
+    <div class="card-title">
+        <span>Registro de Importações</span>
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;" id="contador-registros">
+            {{ historico|length }} cargas registradas
+        </span>
+    </div>
+
+    {% if historico %}
+    <div class="table-responsive">
+        <table class="modern-table" id="historico-tabela">
+            <thead>
+                <tr>
+                    <th>Data / Hora</th>
+                    <th>Contrato</th>
+                    <th>Operador</th>
+                    <th>Base / Tabela</th>
+                    <th>Arquivo</th>
+                    <th style="text-align: right;">Linhas</th>
+                    <th>Data Ref.</th>
+                    <th>Modo</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in historico %}
+                <tr class="log-row" data-contrato-codigo="{{ log.contrato_codigo }}">
+                    <td style="color: var(--text-muted); font-size: 13px;">
+                        {{ log.criado_em | datetime_br }}
+                    </td>
+                    <td>
+                        <strong style="color: var(--text-primary);">{{ log.contrato_nome or log.contrato_codigo }}</strong>
+                        <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">{{ log.contrato_codigo }}</div>
+                    </td>
+                    <td>
+                        <span style="color: var(--text-secondary); font-weight: 600;">{{ log.usuario_nome or 'Sistema' }}</span>
+                    </td>
+                    <td>
+                        <span class="metric-badge badge-neutral" style="font-size: 11px;">
+                            {{ log.tabela_destino }}
+                        </span>
+                    </td>
+                    <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis;" title="{{ log.nome_arquivo }}">
+                        {{ log.nome_arquivo }}
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: var(--text-primary);">
+                        {{ log.total_linhas | int_br }}
+                    </td>
+                    <td style="font-size: 12px; color: var(--text-secondary);">
+                        {{ log.data_referencia | date_br }}
+                    </td>
+                    <td>
+                        <span style="font-size: 12px; color: var(--text-secondary);">
+                            {% if log.acao == 'substituir_data' %}
+                                Substituição
+                            {% elif log.acao == 'substituicao_completa' %}
+                                Substituição Total
+                            {% else %}
+                                Append
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if log.status == 'sucesso' %}
+                            <span class="metric-badge badge-success">Sucesso</span>
+                        {% else %}
+                            <span class="metric-badge badge-danger" title="{{ log.mensagem }}">Erro</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <p>Nenhuma importação registrada no sistema até o momento.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function filtrarHistorico() {
+    const select = document.getElementById('filtro-contrato-select');
+    const valor = select.value;
+    const rows = document.querySelectorAll('.log-row');
+    let visiveis = 0;
+
+    rows.forEach(row => {
+        const codigo = row.getAttribute('data-contrato-codigo');
+        if (valor === 'todos' || codigo === valor) {
+            row.style.display = '';
+            visiveis++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    const contador = document.getElementById('contador-registros');
+    if (contador) {
+        contador.innerText = `${visiveis} cargas exibidas`;
+    }
+}
+</script>
+{% endblock %}

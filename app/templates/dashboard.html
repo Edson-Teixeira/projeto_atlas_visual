@@ -11,7 +11,31 @@
 {% else %}
 
 <!-- Título e Seletor para Administradores -->
-<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+{% if user.is_admin %}
+<div style="background: rgba(79, 70, 229, 0.1); border: 1px solid var(--primary); border-radius: var(--radius-md); padding: 10px 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="metric-badge badge-warning" style="font-size: 11px;">Visão do Administrador</span>
+        <span style="font-size: 13px; color: var(--text-primary);">Você está inspecionando a tela operacional de <strong>{{ contrato.nome_exibicao }}</strong>.</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <form style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Mudar Contrato:</span>
+            <select class="form-select" onchange="if(this.value) window.location.href='/admin/contrato/' + this.value" style="font-size: 12px; padding: 4px 10px; min-width: 170px;">
+                {% for c in todos_contratos %}
+                    <option value="{{ c.id }}" {% if c.id == contrato.id %}selected{% endif %}>
+                        {{ c.nome_exibicao }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary btn-sm" style="font-size: 12px; padding: 5px 12px; gap: 6px;">
+            <span>&larr; Voltar ao Painel Admin</span>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
     <div>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
             <h2 style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">
@@ -25,19 +49,6 @@
             Central de carga diária e sincronização com o banco de dados PostgreSQL (Cifra).
         </p>
     </div>
-
-    {% if user.is_admin and todos_contratos %}
-    <form method="GET" action="{{ url_for('main.dashboard') }}" style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Alternar Contrato:</span>
-        <select name="contrato_id" class="form-select" onchange="this.form.submit()" style="min-width: 200px;">
-            {% for c in todos_contratos %}
-                <option value="{{ c.id }}" {% if c.id == contrato.id %}selected{% endif %}>
-                    {{ c.nome_exibicao }}
-                </option>
-            {% endfor %}
-        </select>
-    </form>
-    {% endif %}
 </div>
 
 <!-- RESUMO DO STATUS E ÚLTIMA CARGA (COMPACTO) -->
