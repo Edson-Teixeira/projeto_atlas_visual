@@ -123,15 +123,15 @@
             <!-- Card 1: Base Principal (Fiscalização) -->
             <div id="card-upload-principal" class="upload-box">
                 <div>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                        <h3 style="font-size: 17px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <h3 style="font-size: 15px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
                             <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--info);"></span>
                             {% if contrato.codigo == 'brk_fiscalizacao' %}Importar Base Fiscalização{% else %}Importar Base Principal{% endif %}
                         </h3>
                         <span class="metric-badge badge-info">{{ contrato.tabela_principal }}</span>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">
-                        Arquivo diário da operação principal. Suporta arquivos <strong>.CSV</strong> e planilhas <strong>.XLSX</strong>.
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">
+                        Arquivo diário da operação principal (.CSV ou .XLSX).
                     </p>
 
                     <form method="POST" action="{{ url_for('main.importar_base', tipo_base='principal') }}" enctype="multipart/form-data">
@@ -140,37 +140,37 @@
                         <div class="upload-dropzone">
                             <input type="file" name="file" accept=".csv, .xlsx, .xls" style="display: none;" required>
                             <div class="upload-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                     <polyline points="17 8 12 3 7 8"></polyline>
                                     <line x1="12" y1="3" x2="12" y2="15"></line>
                                 </svg>
                             </div>
-                            <strong style="display: block; font-size: 13px; color: var(--text-primary); margin-bottom: 2px;">
-                                Clique para selecionar ou arraste o arquivo aqui
-                            </strong>
-                            <span style="font-size: 11px; color: var(--text-muted);">
-                                Formatos aceitos: CSV ou Excel (.xlsx, .xls)
-                            </span>
-                            <div class="file-chosen-info"></div>
+                            <div style="flex: 1; min-width: 0;">
+                                <strong style="display: block; font-size: 12px; color: var(--text-primary); margin-bottom: 1px;">
+                                    Clique ou arraste o arquivo aqui
+                                </strong>
+                                <span style="font-size: 11px; color: var(--text-muted);">
+                                    Formatos aceitos: CSV ou Excel (.xlsx, .xls)
+                                </span>
+                                <div class="file-chosen-info"></div>
+                            </div>
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 12px;">
-                            <label class="form-label" style="font-size: 11px;">Comportamento ao carregar:</label>
-                            <select name="action" class="form-select" style="font-size: 12px; padding: 6px 10px;">
-                                <option value="substituir_data" selected>Substituir registros da mesma data (recomendado)</option>
-                                <option value="append">Adicionar ao final sem apagar anteriores (Append)</option>
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
+                            <select name="action" class="form-select" style="font-size: 12px; padding: 7px 10px; flex: 1.1; min-width: 0;" title="Comportamento ao carregar">
+                                <option value="substituir_data" selected>Substituir mesma data</option>
+                                <option value="append">Adicionar ao final (Append)</option>
                             </select>
+                            <button type="submit" class="btn btn-primary" style="flex: 0.9; font-size: 12px; padding: 7px 12px; white-space: nowrap; justify-content: center;" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                <span>Carregar Base</span>
+                            </button>
                         </div>
-
-                        <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 13px; padding: 8px 14px;" disabled>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            <span>Carregar no PostgreSQL</span>
-                        </button>
                     </form>
                 </div>
             </div>
@@ -179,8 +179,8 @@
             {% if contrato.tabela_secundaria %}
             <div id="card-upload-secundaria" class="upload-box" style="border-color: rgba(139, 92, 246, 0.4);">
                 <div>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                        <h3 style="font-size: 17px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <h3 style="font-size: 15px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
                             <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--purple);"></span>
                             {% if contrato.codigo == 'brk_fiscalizacao' %}Importar Base Diagnóstico{% else %}Importar Base Secundária{% endif %}
                         </h3>
@@ -188,7 +188,7 @@
                             {{ contrato.tabela_secundaria }}
                         </span>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">
                         Base complementar de diagnóstico. Destino: <strong>{{ contrato.tabela_secundaria }}</strong>.
                     </p>
 
@@ -198,37 +198,37 @@
                         <div class="upload-dropzone">
                             <input type="file" name="file" accept=".csv, .xlsx, .xls" style="display: none;" required>
                             <div class="upload-icon" style="color: var(--purple);">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
                                     <line x1="12" y1="3" x2="12" y2="15"></line>
                                 </svg>
                             </div>
-                            <strong style="display: block; font-size: 13px; color: var(--text-primary); margin-bottom: 2px;">
-                                Clique para selecionar ou arraste o arquivo aqui
-                            </strong>
-                            <span style="font-size: 11px; color: var(--text-muted);">
-                                Formatos aceitos: CSV ou Excel (.xlsx, .xls)
-                            </span>
-                            <div class="file-chosen-info"></div>
+                            <div style="flex: 1; min-width: 0;">
+                                <strong style="display: block; font-size: 12px; color: var(--text-primary); margin-bottom: 1px;">
+                                    Clique ou arraste o arquivo aqui
+                                </strong>
+                                <span style="font-size: 11px; color: var(--text-muted);">
+                                    Formatos aceitos: CSV ou Excel (.xlsx, .xls)
+                                </span>
+                                <div class="file-chosen-info"></div>
+                            </div>
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 12px;">
-                            <label class="form-label" style="font-size: 11px;">Comportamento ao carregar:</label>
-                            <select name="action" class="form-select" style="font-size: 12px; padding: 6px 10px;">
-                                <option value="substituir_data" selected>Substituir registros da mesma data (recomendado)</option>
-                                <option value="append">Adicionar ao final sem apagar anteriores (Append)</option>
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
+                            <select name="action" class="form-select" style="font-size: 12px; padding: 7px 10px; flex: 1.1; min-width: 0;" title="Comportamento ao carregar">
+                                <option value="substituir_data" selected>Substituir mesma data</option>
+                                <option value="append">Adicionar ao final (Append)</option>
                             </select>
+                            <button type="submit" class="btn btn-primary" style="flex: 0.9; background-color: var(--purple); font-size: 12px; padding: 7px 12px; white-space: nowrap; justify-content: center;" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                <span>Carregar Diagnóstico</span>
+                            </button>
                         </div>
-
-                        <button type="submit" class="btn btn-primary" style="width: 100%; background-color: var(--purple); font-size: 13px; padding: 8px 14px;" disabled>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            <span>Carregar na Base Diagnóstico</span>
-                        </button>
                     </form>
                 </div>
             </div>
@@ -238,8 +238,8 @@
             {% if contrato.tabela_terciaria %}
             <div id="card-upload-terciaria" class="upload-box" style="border-color: rgba(245, 158, 11, 0.4);">
                 <div>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                        <h3 style="font-size: 17px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <h3 style="font-size: 15px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
                             <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning);"></span>
                             Importar Irregularidades
                         </h3>
@@ -247,7 +247,7 @@
                             {{ contrato.tabela_terciaria }}
                         </span>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">
                         Base de irregularidades (<code>CDC</code>, <code>OS</code>, <code>Equipe</code>, <code>Data</code>, <code>Irregularidade</code>, <code>Nº TOI</code>, <code>Observações</code>).
                     </p>
 
@@ -257,37 +257,37 @@
                         <div class="upload-dropzone">
                             <input type="file" name="file" accept=".csv, .xlsx, .xls" style="display: none;" required>
                             <div class="upload-icon" style="color: var(--warning);">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                                     <line x1="12" y1="9" x2="12" y2="13"></line>
                                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                 </svg>
                             </div>
-                            <strong style="display: block; font-size: 13px; color: var(--text-primary); margin-bottom: 2px;">
-                                Clique para selecionar ou arraste o arquivo aqui
-                            </strong>
-                            <span style="font-size: 11px; color: var(--text-muted);">
-                                Formatos aceitos: CSV ou Excel (.xlsx, .xls)
-                            </span>
-                            <div class="file-chosen-info"></div>
+                            <div style="flex: 1; min-width: 0;">
+                                <strong style="display: block; font-size: 12px; color: var(--text-primary); margin-bottom: 1px;">
+                                    Clique ou arraste o arquivo aqui
+                                </strong>
+                                <span style="font-size: 11px; color: var(--text-muted);">
+                                    Formatos aceitos: CSV ou Excel (.xlsx, .xls)
+                                </span>
+                                <div class="file-chosen-info"></div>
+                            </div>
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 12px;">
-                            <label class="form-label" style="font-size: 11px;">Comportamento ao carregar:</label>
-                            <select name="action" class="form-select" style="font-size: 12px; padding: 6px 10px;">
-                                <option value="substituir_data" selected>Substituir registros da mesma data (recomendado)</option>
-                                <option value="append">Adicionar ao final sem apagar anteriores (Append)</option>
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
+                            <select name="action" class="form-select" style="font-size: 12px; padding: 7px 10px; flex: 1.1; min-width: 0;" title="Comportamento ao carregar">
+                                <option value="substituir_data" selected>Substituir mesma data</option>
+                                <option value="append">Adicionar ao final (Append)</option>
                             </select>
+                            <button type="submit" class="btn btn-primary" style="flex: 0.9; background-color: var(--warning); color: #0f172a; font-weight: 700; font-size: 12px; padding: 7px 12px; white-space: nowrap; justify-content: center;" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                <span>Carregar Irreg.</span>
+                            </button>
                         </div>
-
-                        <button type="submit" class="btn btn-primary" style="width: 100%; background-color: var(--warning); color: #0f172a; font-weight: 700; font-size: 13px; padding: 8px 14px;" disabled>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            <span>Carregar em Irregularidades</span>
-                        </button>
                     </form>
                 </div>
             </div>
@@ -472,19 +472,21 @@
                 <div class="upload-dropzone">
                     <input type="file" name="file" accept=".csv, .xlsx, .xls" style="display: none;" required>
                     <div class="upload-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
                     </div>
-                    <strong style="display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 4px;">
-                        Clique para selecionar ou arraste o arquivo aqui
-                    </strong>
-                    <span style="font-size: 12px; color: var(--text-muted);">
-                        Formatos aceitos: CSV ou Excel (.xlsx, .xls)
-                    </span>
-                    <div class="file-chosen-info"></div>
+                    <div style="flex: 1; min-width: 0;">
+                        <strong style="display: block; font-size: 13px; color: var(--text-primary); margin-bottom: 2px;">
+                            Clique para selecionar ou arraste o arquivo aqui
+                        </strong>
+                        <span style="font-size: 11px; color: var(--text-muted);">
+                            Formatos aceitos: CSV ou Excel (.xlsx, .xls)
+                        </span>
+                        <div class="file-chosen-info"></div>
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">
@@ -530,19 +532,21 @@
                 <div class="upload-dropzone">
                     <input type="file" name="file" accept=".csv, .xlsx, .xls" style="display: none;" required>
                     <div class="upload-icon" style="color: var(--purple);">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
                     </div>
-                    <strong style="display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 4px;">
-                        Clique para selecionar ou arraste o arquivo aqui
-                    </strong>
-                    <span style="font-size: 12px; color: var(--text-muted);">
-                        Formatos aceitos: CSV ou Excel (.xlsx, .xls)
-                    </span>
-                    <div class="file-chosen-info"></div>
+                    <div style="flex: 1; min-width: 0;">
+                        <strong style="display: block; font-size: 13px; color: var(--text-primary); margin-bottom: 2px;">
+                            Clique para selecionar ou arraste o arquivo aqui
+                        </strong>
+                        <span style="font-size: 11px; color: var(--text-muted);">
+                            Formatos aceitos: CSV ou Excel (.xlsx, .xls)
+                        </span>
+                        <div class="file-chosen-info"></div>
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">
@@ -589,19 +593,21 @@
                 <div class="upload-dropzone">
                     <input type="file" name="file" accept=".csv, .xlsx, .xls" style="display: none;" required>
                     <div class="upload-icon" style="color: var(--warning);">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                             <line x1="12" y1="9" x2="12" y2="13"></line>
                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                         </svg>
                     </div>
-                    <strong style="display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 4px;">
-                        Clique para selecionar ou arraste o arquivo aqui
-                    </strong>
-                    <span style="font-size: 12px; color: var(--text-muted);">
-                        Formatos aceitos: CSV ou Excel (.xlsx, .xls)
-                    </span>
-                    <div class="file-chosen-info"></div>
+                    <div style="flex: 1; min-width: 0;">
+                        <strong style="display: block; font-size: 13px; color: var(--text-primary); margin-bottom: 2px;">
+                            Clique para selecionar ou arraste o arquivo aqui
+                        </strong>
+                        <span style="font-size: 11px; color: var(--text-muted);">
+                            Formatos aceitos: CSV ou Excel (.xlsx, .xls)
+                        </span>
+                        <div class="file-chosen-info"></div>
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">
