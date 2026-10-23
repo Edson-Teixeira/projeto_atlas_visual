@@ -23,22 +23,27 @@ def init_database():
 
     # 1. Contratos padrão
     contratos = [
-        ("brk_fiscalizacao", "BRK Fiscalização", "brk_fiscalizacao", "brk_fisca_secundaria", "data"),
-        ("brk_hidrometro", "BRK Hidrômetro", "brk_hidrometro", None, "data"),
-        ("brk_pav_comer", "BRK Pav. Comercial", "brk_pav_comer", None, "data"),
-        ("brk_pav_opera", "BRK Pav. Operacional", "brk_pav_opera", None, "data")
+        ("brk_fiscalizacao", "BRK Fiscalização", "brk_fiscalizacao", "brk_fisca_secundaria", "brk_irregularidades", "data"),
+        ("brk_hidrometro", "BRK Hidrômetro", "brk_hidrometro", None, None, "data"),
+        ("brk_pav_comer", "BRK Pav. Comercial", "brk_pav_comer", None, None, "data"),
+        ("brk_pav_opera", "BRK Pav. Operacional", "brk_pav_opera", None, None, "data")
     ]
 
-    for codigo, nome, tab_prin, tab_sec, col_data in contratos:
+    for codigo, nome, tab_prin, tab_sec, tab_ter, col_data in contratos:
         existe = query_one("SELECT id FROM atlas_contratos WHERE codigo = %s", (codigo,))
         if not existe:
             execute("""
-                INSERT INTO atlas_contratos (codigo, nome_exibicao, tabela_principal, tabela_secundaria, coluna_data)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (codigo, nome, tab_prin, tab_sec, col_data))
+                INSERT INTO atlas_contratos (codigo, nome_exibicao, tabela_principal, tabela_secundaria, tabela_terciaria, coluna_data)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (codigo, nome, tab_prin, tab_sec, tab_ter, col_data))
             print(f"Contrato criado: {nome} ({codigo})")
         else:
-            print(f"Contrato já existe: {nome} ({codigo})")
+            execute("""
+                UPDATE atlas_contratos 
+                SET tabela_principal = %s, tabela_secundaria = %s, tabela_terciaria = %s
+                WHERE codigo = %s
+            """, (tab_prin, tab_sec, tab_ter, codigo))
+            print(f"Contrato atualizado: {nome} ({codigo})")
 
     # 2. Usuários padrão
     usuarios = [

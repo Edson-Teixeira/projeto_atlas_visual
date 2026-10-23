@@ -65,9 +65,13 @@
                         <span style="color: var(--text-secondary); font-weight: 600;">{{ log.usuario_nome or 'Sistema' }}</span>
                     </td>
                     <td>
-                        <span class="metric-badge badge-neutral" style="font-size: 11px;">
-                            {{ log.tabela_destino }}
-                        </span>
+                        {% if 'irregular' in log.tabela_destino %}
+                            <span class="metric-badge badge-warning" style="font-size: 11px;">{{ log.tabela_destino }}</span>
+                        {% elif 'secundaria' in log.tabela_destino %}
+                            <span class="metric-badge badge-neutral" style="color: var(--purple); border-color: rgba(139, 92, 246, 0.3); font-size: 11px;">{{ log.tabela_destino }}</span>
+                        {% else %}
+                            <span class="metric-badge badge-info" style="font-size: 11px;">{{ log.tabela_destino }}</span>
+                        {% endif %}
                     </td>
                     <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis;" title="{{ log.nome_arquivo }}">
                         {{ log.nome_arquivo }}

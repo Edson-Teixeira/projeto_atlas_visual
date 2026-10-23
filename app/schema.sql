@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS atlas_contratos (
     nome_exibicao VARCHAR(120) NOT NULL,
     tabela_principal VARCHAR(100) NOT NULL,
     tabela_secundaria VARCHAR(100),
+    tabela_terciaria VARCHAR(100),
     coluna_data VARCHAR(50) DEFAULT 'data',
     ativo BOOLEAN DEFAULT TRUE,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS atlas_importacoes_log (
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Exemplo de tabela secundária para BRK Fiscalização (se ainda não existir)
+-- 4. Exemplo de tabela secundária (Diagnóstico) para BRK Fiscalização (se ainda não existir)
 CREATE TABLE IF NOT EXISTS brk_fisca_secundaria (
     id SERIAL PRIMARY KEY,
     recurso VARCHAR(255),
@@ -55,7 +56,23 @@ CREATE TABLE IF NOT EXISTS brk_fisca_secundaria (
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Tabela de Tipos de Serviço e Valores por Contrato
+-- 5. Tabela de Irregularidades para BRK Fiscalização
+CREATE TABLE IF NOT EXISTS brk_irregularidades (
+    id SERIAL PRIMARY KEY,
+    cdc BIGINT,
+    os VARCHAR(100),
+    equipe VARCHAR(100),
+    data DATE,
+    irregularidade VARCHAR(255),
+    no_toi VARCHAR(100),
+    observacoes TEXT,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_brk_irregularidades_data ON brk_irregularidades(data);
+CREATE INDEX IF NOT EXISTS idx_brk_irregularidades_os ON brk_irregularidades(os);
+CREATE INDEX IF NOT EXISTS idx_brk_irregularidades_cdc ON brk_irregularidades(cdc);
+
+-- 6. Tabela de Tipos de Serviço e Valores por Contrato
 CREATE TABLE IF NOT EXISTS atlas_servicos_valores (
     id SERIAL PRIMARY KEY,
     contrato_id INT NOT NULL REFERENCES atlas_contratos(id) ON DELETE CASCADE,

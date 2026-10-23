@@ -151,7 +151,32 @@ def process_and_import(
         if not col_types:
             return {"success": False, "message": f"Tabela de destino '{target_table}' não encontrada no banco.", "total_lines": 0}
 
-        db_cols = list(col_types.keys())
+        db_cols = set(col_types.keys())
+
+        # Mapeamento de sinônimos/aliases para máxima robustez
+        SYNONYMS = {
+            'cdc': ['cdc_matricula', 'matricula', 'conta'],
+            'cdc_matricula': ['cdc', 'matricula', 'conta'],
+            'os': ['ordem_servico', 'ordem_de_servico', 'ordem'],
+            'ordem_servico': ['os', 'ordem_de_servico', 'ordem'],
+            'no_toi': ['n_toi', 'num_toi', 'numero_toi', 'toi'],
+            'num_toi': ['no_toi', 'n_toi', 'numero_toi', 'toi'],
+            'observacoes': ['observacao', 'obs'],
+            'nome_equipe': ['equipe'],
+            'equipe': ['nome_equipe'],
+        }
+
+        # Renomeia colunas do arquivo se houver sinônimo exato na tabela do banco
+        renames = {}
+        for col in df.columns:
+            if col not in db_cols:
+                # Procura se algum sinônimo existe no banco
+                for target_db_col, aliases in SYNONYMS.items():
+                    if target_db_col in db_cols and col in aliases:
+                        renames[col] = target_db_col
+                        break
+        if renames:
+            df.rename(columns=renames, inplace=True)
 
         # Mapeia colunas coincidentes (desconsidera colunas como 'id' autoincrement se o arquivo não tiver)
         matched_cols = [c for c in df.columns if c in db_cols and c != 'id']
@@ -165,13 +190,32 @@ def process_and_import(
         # Filtra DataFrame somente para as colunas válidas
         df_to_insert = df[matched_cols].copy()
 
-        # 4. Trata e converte colunas de data e timestamp para compatibilidade com PostgreSQL
+        # 4. Trata e converte colunas para compatibilidade exata com PostgreSQL
         for col in matched_cols:
             dtype = col_types.get(col, '')
             if dtype == 'date':
                 df_to_insert[col] = df_to_insert[col].apply(parse_date_value)
             elif 'timestamp' in dtype:
                 df_to_insert[col] = df_to_insert[col].apply(parse_timestamp_value)
+            elif 'int' in dtype:
+                def _parse_int(v):
+                    if pd.isnull(v) or v == '' or str(v).strip().lower() in ('nan', 'none', 'null'):
+                        return None
+                    try:
+                        return int(float(str(v).strip().replace(',', '.')))
+                    except Exception:
+                        return None
+                df_to_insert[col] = df_to_insert[col].apply(_parse_int)
+            elif 'char' in dtype or 'text' in dtype:
+                def _parse_str(v):
+                    if pd.isnull(v) or v == '' or str(v).strip().lower() in ('nan', 'none', 'null'):
+                        return None
+                    s = str(v).strip()
+                    # Remove .0 indesejado em números (ex: 64892.0 -> 64892)
+                    if s.endswith('.0') and s[:-2].isdigit():
+                        return s[:-2]
+                    return s
+                df_to_insert[col] = df_to_insert[col].apply(_parse_str)
 
         # Substitui NaN/None por None para inserção correta de NULLs no PostgreSQL
         df_to_insert = df_to_insert.astype(object).where(pd.notnull(df_to_insert), None)

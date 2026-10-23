@@ -54,7 +54,7 @@ def dashboard():
 def render_admin_dashboard(user):
     """Renderiza a tela de status de cada contrato e histórico global para o Administrador."""
     todos_contratos = query_all("""
-        SELECT id, codigo, nome_exibicao, tabela_principal, tabela_secundaria 
+        SELECT id, codigo, nome_exibicao, tabela_principal, tabela_secundaria, tabela_terciaria 
         FROM atlas_contratos 
         WHERE ativo = TRUE 
         ORDER BY nome_exibicao
@@ -85,8 +85,12 @@ def render_admin_dashboard(user):
             LIMIT 1
         """, (c['id'],))
 
-        # Total acumulado na tabela principal
+        # Total acumulado somando principal, secundária e terciária
         total_acumulado = count_table_rows(c['tabela_principal'])
+        if c.get('tabela_secundaria'):
+            total_acumulado += count_table_rows(c['tabela_secundaria'])
+        if c.get('tabela_terciaria'):
+            total_acumulado += count_table_rows(c['tabela_terciaria'])
 
         # Total de operadores vinculados a esse contrato
         users_count = query_one("SELECT COUNT(*) as c FROM atlas_usuarios WHERE contrato_id = %s", (c['id'],))
@@ -132,7 +136,7 @@ def render_admin_dashboard(user):
 def render_operator_dashboard(user, contrato_id, is_admin_preview=False):
     """Renderiza a visão de operador para um contrato específico."""
     contrato = query_one("""
-        SELECT id, codigo, nome_exibicao, tabela_principal, tabela_secundaria, coluna_data, criado_em
+        SELECT id, codigo, nome_exibicao, tabela_principal, tabela_secundaria, tabela_terciaria, coluna_data, criado_em
         FROM atlas_contratos
         WHERE id = %s
     """, (contrato_id,))
@@ -338,7 +342,7 @@ def admin_historico():
 @main_bp.route('/importar/<tipo_base>', methods=['POST'])
 @login_required
 def importar_base(tipo_base):
-    if tipo_base not in ('principal', 'secundaria'):
+    if tipo_base not in ('principal', 'secundaria', 'terciaria', 'irregularidades'):
         flash("Tipo de base inválido.", "danger")
         return redirect(url_for('main.dashboard'))
 
@@ -354,25 +358,32 @@ def importar_base(tipo_base):
         flash("Contrato não encontrado.", "danger")
         return redirect(url_for('main.dashboard'))
 
+    dest_redirect = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
+
     if tipo_base == 'principal':
         target_table = contrato['tabela_principal']
-    else:
+        log_tipo = 'principal'
+    elif tipo_base == 'secundaria':
         target_table = contrato['tabela_secundaria']
+        log_tipo = 'secundaria'
         if not target_table:
-            flash("Este contrato não possui base secundária configurada.", "warning")
-            dest = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
-            return redirect(dest)
+            flash("Este contrato não possui base secundária (Diagnóstico) configurada.", "warning")
+            return redirect(dest_redirect)
+    elif tipo_base in ('terciaria', 'irregularidades'):
+        target_table = contrato.get('tabela_terciaria')
+        log_tipo = 'irregularidades'
+        if not target_table:
+            flash("Este contrato não possui base de Irregularidades configurada.", "warning")
+            return redirect(dest_redirect)
 
     if 'file' not in request.files:
         flash("Nenhum arquivo enviado.", "danger")
-        dest = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
-        return redirect(dest)
+        return redirect(dest_redirect)
 
     file = request.files['file']
     if file.filename == '':
         flash("Nenhum arquivo selecionado.", "danger")
-        dest = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
-        return redirect(dest)
+        return redirect(dest_redirect)
 
     action = request.form.get('action', 'substituir_data')
 
@@ -382,7 +393,7 @@ def importar_base(tipo_base):
         target_table=target_table,
         contrato_id=contrato['id'],
         usuario_id=user['id'],
-        tipo_base=tipo_base,
+        tipo_base=log_tipo,
         action=action,
         date_col=contrato['coluna_data'] or 'data'
     )
@@ -392,8 +403,7 @@ def importar_base(tipo_base):
     else:
         flash(f"❌ {res['message']}", "danger")
 
-    dest = url_for('main.admin_ver_contrato', contrato_id=contrato_id) if user['is_admin'] else url_for('main.dashboard')
-    return redirect(dest)
+    return redirect(dest_redirect)
 
 @main_bp.route('/servicos/exportar/<int:contrato_id>')
 @login_required
