@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 from werkzeug.security import generate_password_hash
 from app import create_app
-from app.db import get_db, query_one, execute
+from app.db import get_db, query_one, query_all, execute
 from app.importer import normalize_column_name, read_uploaded_file, process_and_import
 from werkzeug.datastructures import FileStorage
 
@@ -427,6 +427,47 @@ class AtlasSistemaTestCase(unittest.TestCase):
 
         execute("DELETE FROM brk_fiscalizacao WHERE ordem_servico IN ('23-8340813-TEST', '23-8331183-TEST');")
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'base_fiscalizacao_real.csv';")
+
+    def test_fiscalizacao_allows_null_os_status_matricula(self):
+        """Valida que linhas sem OS, sem Status e sem Matrícula são aceitas sem restrição."""
+        csv_nulos = (
+            'Recurso,"Data","CDC/Matricula","Ordem de Serviço","Status da Atividade","Nome"\n'
+            'RMM01,"22/10/26","111111","","concluído","Teste Sem OS"\n'
+            'RMM02,"22/10/26","222222","OS-222","","Teste Sem Status"\n'
+            'RMM03,"22/10/26","","OS-333","concluído","Teste Sem Matricula"\n'
+            'RMM04,"22/10/26","","","","Teste Sem Tudo"\n'
+        )
+
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        user = query_one("SELECT id FROM atlas_usuarios WHERE username = 'test_fiscalizacao'")
+
+        file_storage = FileStorage(
+            stream=io.BytesIO(csv_nulos.encode('utf-8')),
+            filename="teste_linhas_nulas.csv",
+            content_type="text/csv"
+        )
+
+        res = process_and_import(
+            file_storage=file_storage,
+            filename="teste_linhas_nulas.csv",
+            target_table="brk_fiscalizacao",
+            contrato_id=contrato['id'],
+            usuario_id=user['id'],
+            tipo_base='principal',
+            action='append',
+            date_col='data'
+        )
+
+        self.assertTrue(res['success'], f"Importação de nulos falhou: {res.get('message')}")
+        self.assertEqual(res['total_lines'], 4)
+
+        # Confirma que todas as 4 linhas foram persistidas
+        rows = query_all("SELECT ordem_servico, status_atividade, cdc_matricula, nome FROM brk_fiscalizacao WHERE nome LIKE %s", ('Teste Sem %',))
+        self.assertEqual(len(rows), 4)
+
+        # Limpeza
+        execute("DELETE FROM brk_fiscalizacao WHERE nome LIKE %s", ('Teste Sem %',))
+        execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'teste_linhas_nulas.csv';")
 
     def test_favicon_and_logo_available(self):
         resp_fav = self.client.get('/favicon.ico')

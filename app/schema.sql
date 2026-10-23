@@ -103,3 +103,42 @@ CREATE TABLE IF NOT EXISTS atlas_servicos_valores (
 CREATE INDEX IF NOT EXISTS idx_atlas_importacoes_contrato ON atlas_importacoes_log(contrato_id, criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_atlas_usuarios_username ON atlas_usuarios(username);
 CREATE INDEX IF NOT EXISTS idx_atlas_servicos_contrato ON atlas_servicos_valores(contrato_id, tipo_servico);
+
+
+-- 9. Tabela Principal BRK Fiscalização (todos os campos operacionais opcionais com id autoincremento)
+CREATE TABLE IF NOT EXISTS brk_fiscalizacao (
+    id BIGSERIAL PRIMARY KEY,
+    recurso VARCHAR(255),
+    data DATE,
+    cdc_matricula BIGINT,
+    ordem_servico VARCHAR(255),
+    prazo_cliente TIMESTAMP,
+    status_atividade VARCHAR(255),
+    nome VARCHAR(255),
+    endereco TEXT,
+    bairro VARCHAR(255),
+    cidade VARCHAR(255),
+    estado VARCHAR(50),
+    cep_codigo_postal VARCHAR(50),
+    telefone VARCHAR(100),
+    telefone_celular VARCHAR(100),
+    email VARCHAR(255),
+    intervalo_tempo VARCHAR(100),
+    janela_servico VARCHAR(100),
+    inicio TIME,
+    fim TIME,
+    inicio_fim VARCHAR(100),
+    inicio_sla TIMESTAMP,
+    fim_sla TIMESTAMP,
+    duracao INTERVAL,
+    tempo_deslocamento INTERVAL,
+    tipo_atividade VARCHAR(100),
+    habilidade_trabalho TEXT,
+    tipo_servico VARCHAR(255),
+    valor_servico NUMERIC(12, 2),
+    area_trabalho VARCHAR(255),
+    nome_equipe VARCHAR(255),
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_brk_fiscalizacao_os_status ON brk_fiscalizacao(ordem_servico, status_atividade);
+CREATE INDEX IF NOT EXISTS idx_brk_fiscalizacao_data ON brk_fiscalizacao(data);

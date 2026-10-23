@@ -328,10 +328,7 @@ def process_and_import(
         # Substitui NaN/None por None para inserção correta de NULLs no PostgreSQL
         df_to_insert = df_to_insert.astype(object).where(pd.notnull(df_to_insert), None)
 
-        # Evita duplicação interna dentro do próprio lote do arquivo se houver chave primária composta
-        conflict_subset = [c for c in ['ordem_servico', 'status_atividade'] if c in df_to_insert.columns]
-        if len(conflict_subset) == 2:
-            df_to_insert.drop_duplicates(subset=conflict_subset, keep='last', inplace=True)
+        # Todas as linhas do lote sao mantidas (sem descartar linhas sem OS ou Status)
 
         # 5. Trata datas de referência para idempotência diária
         reference_date = None
@@ -354,19 +351,9 @@ def process_and_import(
                         cur.execute(f"DELETE FROM {target_table} WHERE {date_col} = ANY(%s)", (unique_dates,))
                     linhas_removidas = cur.rowcount
 
-                # 5. Inserção em lote de alto desempenho com suporte a conflito para tabelas com chave primária
+                # 5. Inserção em lote de alto desempenho
                 col_names_str = ", ".join(matched_cols)
-                if target_table == 'brk_fiscalizacao' and 'ordem_servico' in matched_cols and 'status_atividade' in matched_cols:
-                    update_cols = [c for c in matched_cols if c not in ('ordem_servico', 'status_atividade')]
-                    update_clause = ", ".join([f"{c} = EXCLUDED.{c}" for c in update_cols])
-                    insert_sql = f"""
-                        INSERT INTO {target_table} ({col_names_str}) 
-                        VALUES %s 
-                        ON CONFLICT (ordem_servico, status_atividade) 
-                        DO UPDATE SET {update_clause}
-                    """
-                else:
-                    insert_sql = f"INSERT INTO {target_table} ({col_names_str}) VALUES %s"
+                insert_sql = f"INSERT INTO {target_table} ({col_names_str}) VALUES %s"
 
                 records = [tuple(row) for row in df_to_insert.to_numpy()]
                 execute_values(cur, insert_sql, records, page_size=1000)

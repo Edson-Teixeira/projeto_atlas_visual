@@ -21,6 +21,29 @@ def init_database():
             cur.execute(schema_sql)
     print("Schema executado com sucesso!")
 
+    # Garante flexibilidade em brk_fiscalizacao (campos opcionais sem constraints restritivas)
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("ALTER TABLE brk_fiscalizacao DROP CONSTRAINT IF EXISTS pk_brk_fiscalizacao_os_status;")
+                cur.execute("ALTER TABLE brk_fiscalizacao ALTER COLUMN ordem_servico DROP NOT NULL;")
+                cur.execute("ALTER TABLE brk_fiscalizacao ALTER COLUMN status_atividade DROP NOT NULL;")
+                cur.execute("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'brk_fiscalizacao' AND column_name = 'id'
+                        ) THEN
+                            ALTER TABLE brk_fiscalizacao ADD COLUMN id BIGSERIAL PRIMARY KEY;
+                        END IF;
+                    END $$;
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_brk_fiscalizacao_os_status ON brk_fiscalizacao(ordem_servico, status_atividade);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_brk_fiscalizacao_data ON brk_fiscalizacao(data);")
+    except Exception as e:
+        print(f"Aviso migração brk_fiscalizacao: {e}")
+
     # 1. Contratos padrão
     contratos = [
         ("brk_fiscalizacao", "BRK Fiscalização", "brk_fiscalizacao", "brk_fisca_secundaria", "brk_irregularidades", "brk_fisca_valores", "data"),
