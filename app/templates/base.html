@@ -10,8 +10,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}">
     <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20261023_03') }}">
+    <script src="{{ url_for('static', filename='js/app.js', v='20261023_03') }}" defer></script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
     {% block layout %}
@@ -19,8 +19,8 @@
         <!-- Topbar / Cabeçalho -->
         <header class="app-header">
             <a href="{{ url_for('main.dashboard') }}" class="brand-wrapper">
-                <div class="brand-icon">
-                    <img src="{{ url_for('static', filename='img/atlas_logo.png') }}" alt="Atlas" class="brand-img">
+                <div class="brand-icon" style="width: 42px; height: 42px; min-width: 42px; max-width: 42px; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <img src="{{ url_for('static', filename='img/atlas_logo.png') }}" alt="Atlas" class="brand-img" style="width: 100%; height: 100%; max-width: 36px; max-height: 36px; object-fit: contain; display: block;">
                 </div>
                 <div class="brand-text">
                     <h1>Atlas</h1>
