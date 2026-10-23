@@ -46,7 +46,7 @@ class AtlasSistemaTestCase(unittest.TestCase):
     def test_login_page_renders(self):
         response = self.client.get('/login')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Atlas Sistema", response.data)
+        self.assertIn(b"Atlas", response.data)
         self.assertIn(b"Entrar no Sistema", response.data)
 
     def test_login_invalid_credentials(self):
@@ -375,6 +375,13 @@ class AtlasSistemaTestCase(unittest.TestCase):
 
         execute("DELETE FROM brk_irregularidades WHERE os IN ('23-7301989', '23-7324933');")
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'irregularidades_abril.csv';")
+
+    def test_favicon_and_logo_available(self):
+        resp_fav = self.client.get('/favicon.ico')
+        self.assertEqual(resp_fav.status_code, 200)
+
+        resp_logo = self.client.get('/static/img/atlas_logo.png')
+        self.assertEqual(resp_logo.status_code, 200)
 
 if __name__ == '__main__':
     unittest.main()

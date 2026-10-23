@@ -1,20 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Login - Atlas Sistema{% endblock %}
+{% block title %}Login - Atlas{% endblock %}
 
 {% block layout %}
 <div class="glow-bg" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
     <div class="form-card">
         <!-- Cabeçalho do Card -->
         <div style="text-align: center; margin-bottom: 28px;">
-            <div class="brand-icon" style="width: 52px; height: 52px; margin: 0 auto 16px auto;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                    <polyline points="2 17 12 22 22 17"></polyline>
-                    <polyline points="2 12 12 17 22 12"></polyline>
-                </svg>
+            <div class="brand-icon" style="width: 68px; height: 68px; margin: 0 auto 16px auto; padding: 6px; border-radius: var(--radius-lg);">
+                <img src="{{ url_for('static', filename='img/atlas_logo.png') }}" alt="Atlas" class="brand-img">
             </div>
-            <h2 style="font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">Atlas Sistema</h2>
+            <h2 style="font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">Atlas</h2>
             <p style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">Acesse o painel com as credenciais do seu contrato</p>
         </div>
 

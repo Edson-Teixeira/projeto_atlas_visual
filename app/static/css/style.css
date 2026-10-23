@@ -1,5 +1,5 @@
 /* ==============================================================================
-   Atlas Sistema - Design System Moderno (Dark-First)
+   Atlas - Design System Moderno (Dark-First)
    Inspirado na arquitetura visual do Meu Financeiro
    ============================================================================== */
 
@@ -115,15 +115,31 @@ body {
 }
 
 .brand-icon {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.16) 0%, rgba(139, 92, 246, 0.16) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.28);
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.18);
+    padding: 3px;
+    transition: var(--transition);
+    overflow: hidden;
+}
+
+.brand-wrapper:hover .brand-icon {
+    transform: scale(1.05);
+    border-color: var(--primary);
+    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.32);
+}
+
+.brand-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .brand-text h1 {

@@ -1,5 +1,5 @@
 // ==============================================================================
-// Atlas Sistema - Interações de UI e Upload
+// Atlas - Interações de UI e Upload
 // ==============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {

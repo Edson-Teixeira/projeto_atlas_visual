@@ -65,4 +65,16 @@ def create_app():
         except Exception:
             return str(val)
 
+    # Rota dedicada para favicon.ico
+    import os
+    from flask import send_from_directory
+
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(
+            os.path.join(app.root_path, 'static'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon'
+        )
+
     return app
