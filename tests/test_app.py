@@ -122,5 +122,46 @@ class AtlasSistemaTestCase(unittest.TestCase):
         execute("DELETE FROM brk_fiscalizacao WHERE ordem_servico = 'OS-XLS-01';")
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'teste_planilha.xlsx';")
 
+    def test_date_format_mm_dd_yy(self):
+        # Testa especificamente o formato MM/DD/YY (ex: 09/14/26) reportado pelo usuário
+        csv_data = (
+            "recurso;Data;cdc_matricula;ordem_servico;status_atividade\n"
+            "EQP_DATE;09/14/26;445566;OS-DATE-01;Concluida\n"
+            "EQP_DATE;09/14/26;445567;OS-DATE-02;Concluida\n"
+        )
+        file_storage = FileStorage(
+            stream=io.BytesIO(csv_data.encode('utf-8')),
+            filename="teste_data_mm_dd_yy.csv",
+            content_type="text/csv"
+        )
+
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        user = query_one("SELECT id FROM atlas_usuarios WHERE username = 'fiscalizacao'")
+
+        res = process_and_import(
+            file_storage=file_storage,
+            filename="teste_data_mm_dd_yy.csv",
+            target_table="brk_fiscalizacao",
+            contrato_id=contrato['id'],
+            usuario_id=user['id'],
+            tipo_base='principal',
+            action='substituir_data',
+            date_col='data'
+        )
+
+        self.assertTrue(res['success'])
+        self.assertEqual(res['total_lines'], 2)
+        # Deve ter convertido perfeitamente para 2026-09-14
+        self.assertEqual(res['date_reference'], '2026-09-14')
+
+        # Verifica se gravou no Postgres como date correto (2026-09-14)
+        registro = query_one("SELECT data FROM brk_fiscalizacao WHERE ordem_servico = 'OS-DATE-01'")
+        self.assertIsNotNone(registro)
+        self.assertEqual(str(registro['data']), '2026-09-14')
+
+        # Limpa dados de teste
+        execute("DELETE FROM brk_fiscalizacao WHERE ordem_servico IN ('OS-DATE-01', 'OS-DATE-02');")
+        execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'teste_data_mm_dd_yy.csv';")
+
 if __name__ == '__main__':
     unittest.main()

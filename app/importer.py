@@ -18,16 +18,68 @@ def normalize_column_name(name: str) -> str:
     name = re.sub(r'_+', '_', name).strip('_')
     return name
 
-def get_table_columns(table_name: str) -> list[str]:
-    """Retorna a lista de colunas da tabela de destino no PostgreSQL."""
+def get_table_column_types(table_name: str) -> dict[str, str]:
+    """Retorna um dicionário {coluna: data_type} da tabela no PostgreSQL."""
     sql = """
-        SELECT column_name 
+        SELECT column_name, data_type 
         FROM information_schema.columns 
-        WHERE table_name = %s 
-        ORDER BY ordinal_position;
+        WHERE table_name = %s;
     """
     rows = query_all(sql, (table_name,))
-    return [r['column_name'] for r in rows]
+    return {r['column_name']: r['data_type'] for r in rows}
+
+def parse_date_value(val):
+    """
+    Converte múltiplos formatos de data (ex: 09/14/26, 14/09/2026, 2026-09-14)
+    para um objeto date nativo do Python (YYYY-MM-DD).
+    """
+    if pd.isnull(val) or val == '' or str(val).strip().lower() in ('nan', 'none', 'null', 'nat'):
+        return None
+    if isinstance(val, date) and not isinstance(val, datetime):
+        return val
+    if isinstance(val, datetime):
+        return val.date()
+
+    val_str = str(val).strip()
+    
+    # 1. Tenta formatos conhecidos explicitamente
+    known_formats = [
+        '%m/%d/%y',    # 09/14/26 (MM/DD/YY - formato reportado)
+        '%m/%d/%Y',    # 09/14/2026
+        '%d/%m/%Y',    # 14/09/2026 (DD/MM/YYYY)
+        '%d/%m/%y',    # 14/09/26 (DD/MM/YY)
+        '%Y-%m-%d',    # 2026-09-14 (ISO)
+        '%Y/%m/%d',    # 2026/09/14
+    ]
+    for fmt in known_formats:
+        try:
+            return datetime.strptime(val_str, fmt).date()
+        except ValueError:
+            pass
+
+    # 2. Fallback flexível via pandas
+    try:
+        dt = pd.to_datetime(val_str, format='mixed', errors='coerce')
+        if pd.notnull(dt):
+            return dt.date()
+    except Exception:
+        pass
+
+    return None
+
+def parse_timestamp_value(val):
+    """Converte valores para timestamp do Python."""
+    if pd.isnull(val) or val == '' or str(val).strip().lower() in ('nan', 'none', 'null', 'nat'):
+        return None
+    if isinstance(val, datetime):
+        return val
+    try:
+        dt = pd.to_datetime(str(val).strip(), format='mixed', errors='coerce')
+        if pd.notnull(dt):
+            return dt.to_pydatetime()
+    except Exception:
+        pass
+    return None
 
 def read_uploaded_file(file_storage, filename: str) -> pd.DataFrame:
     """
@@ -94,10 +146,12 @@ def process_and_import(
         # 2. Normaliza os nomes das colunas do arquivo
         df.columns = [normalize_column_name(c) for c in df.columns]
 
-        # 3. Consulta colunas existentes na tabela de destino
-        db_cols = get_table_columns(target_table)
-        if not db_cols:
+        # 3. Consulta colunas existentes e tipos na tabela de destino
+        col_types = get_table_column_types(target_table)
+        if not col_types:
             return {"success": False, "message": f"Tabela de destino '{target_table}' não encontrada no banco.", "total_lines": 0}
+
+        db_cols = list(col_types.keys())
 
         # Mapeia colunas coincidentes (desconsidera colunas como 'id' autoincrement se o arquivo não tiver)
         matched_cols = [c for c in df.columns if c in db_cols and c != 'id']
@@ -111,19 +165,23 @@ def process_and_import(
         # Filtra DataFrame somente para as colunas válidas
         df_to_insert = df[matched_cols].copy()
 
+        # 4. Trata e converte colunas de data e timestamp para compatibilidade com PostgreSQL
+        for col in matched_cols:
+            dtype = col_types.get(col, '')
+            if dtype == 'date':
+                df_to_insert[col] = df_to_insert[col].apply(parse_date_value)
+            elif 'timestamp' in dtype:
+                df_to_insert[col] = df_to_insert[col].apply(parse_timestamp_value)
+
         # Substitui NaN/None por None para inserção correta de NULLs no PostgreSQL
         df_to_insert = df_to_insert.astype(object).where(pd.notnull(df_to_insert), None)
 
-        # 4. Trata data de referência para idempotência diária
+        # 5. Trata data de referência para idempotência diária
         reference_date = None
         if date_col in df_to_insert.columns:
-            # Tenta converter para data no formato do banco ou string
-            try:
-                datas_validas = pd.to_datetime(df_to_insert[date_col], errors='coerce').dropna()
-                if not datas_validas.empty:
-                    reference_date = datas_validas.iloc[0].date()
-            except Exception:
-                reference_date = None
+            valid_dates = [d for d in df_to_insert[date_col] if isinstance(d, date)]
+            if valid_dates:
+                reference_date = valid_dates[0]
 
         linhas_removidas = 0
         total_a_inserir = len(df_to_insert)
