@@ -22,3 +22,5 @@ services:
       - DEBUG=${DEBUG:-False}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./:/app

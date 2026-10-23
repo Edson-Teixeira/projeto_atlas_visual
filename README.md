@@ -1,4 +1,4 @@
-# Atlas Sistema - Gestão & Importação Multi-Tenant
+# Atlas - Gestão & Importação Multi-Tenant
 
 Sistema web com interface moderna (*Dark-First*) desenvolvido em **Python (Flask)**, **PostgreSQL** e **Pandas**, projetado para permitir que múltiplos operadores realizem a carga e importação diária de dados dos seus respectivos contratos operacionais.
 
