@@ -17,7 +17,8 @@ def get_pool():
             user=Config.DB_USER,
             password=Config.DB_PASSWORD,
             dbname=Config.DB_NAME,
-            connect_timeout=Config.DB_CONNECT_TIMEOUT
+            connect_timeout=Config.DB_CONNECT_TIMEOUT,
+            options=f"-c timezone={Config.DB_TIMEZONE}"
         )
     return _db_pool
 

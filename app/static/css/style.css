@@ -161,6 +161,34 @@ body {
     margin-bottom: 32px;
 }
 
+/* CARDS DE MÉTRICAS COMPACTOS / SLIM */
+.metrics-slim-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.metric-card-slim {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+    min-height: 64px;
+}
+
+.metric-card-slim:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
 .metric-card {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);

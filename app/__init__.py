@@ -18,10 +18,17 @@ def create_app():
     def datetime_br_filter(val):
         if not val:
             return '-'
-        if isinstance(val, (datetime, date)):
-            return val.strftime('%d/%m/%Y às %H:%M')
         try:
-            dt = datetime.fromisoformat(str(val))
+            if isinstance(val, (datetime, date)):
+                dt = val
+            else:
+                dt = datetime.fromisoformat(str(val))
+            
+            # Se tiver fuso horário explícito, converte para o horário de Brasília
+            if isinstance(dt, datetime) and dt.tzinfo is not None:
+                import zoneinfo
+                dt = dt.astimezone(zoneinfo.ZoneInfo("America/Sao_Paulo"))
+                
             return dt.strftime('%d/%m/%Y às %H:%M')
         except Exception:
             return str(val)

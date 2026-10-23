@@ -15,6 +15,7 @@ class Config:
     DB_NAME = os.getenv("DB_NAME", "cifra")
     DB_DEFAULT_SCHEMA = os.getenv("DB_DEFAULT_SCHEMA", "public")
     DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
+    DB_TIMEZONE = os.getenv("DB_TIMEZONE", "America/Sao_Paulo")
 
     # Servidor Flask
     PORT = int(os.getenv("PORT", "5000"))
