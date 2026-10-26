@@ -19,14 +19,14 @@ def normalize_column_name(name: str) -> str:
     return name
 
 def get_table_column_types(table_name: str) -> dict[str, str]:
-    """Retorna um dicionário {coluna: data_type} da tabela no PostgreSQL."""
+    """Retorna um dicionário {coluna: data_type} da tabela no PostgreSQL, ignorando colunas geradas automaticamente (STORED GENERATED)."""
     sql = """
-        SELECT column_name, data_type 
+        SELECT column_name, data_type, is_generated 
         FROM information_schema.columns 
         WHERE table_name = %s;
     """
     rows = query_all(sql, (table_name,))
-    return {r['column_name']: r['data_type'] for r in rows}
+    return {r['column_name']: r['data_type'] for r in rows if r.get('is_generated') != 'ALWAYS'}
 
 def parse_date_value(val):
     """
@@ -257,8 +257,8 @@ REQUIRED_COLUMNS_BY_TABLE = {
     'brk_hidrometro': ['ordem_servico', 'status_atividade', 'data', 'recurso', 'cdc_matricula'],
     'brk_fisca_secundaria': ['ordem_servico', 'status_atividade', 'data'],
     'brk_irregularidades': ['os', 'data', 'irregularidade'],
-    'brk_pav_comer': ['ordem_servico', 'data'],
-    'brk_pav_opera': ['ordem_servico', 'data'],
+    'brk_pav_comer': ['ordem_servico', 'data', 'recurso'],
+    'brk_pav_opera': ['ordem_servico', 'data', 'recurso'],
 }
 
 COLUMN_DISPLAY_NAMES = {
@@ -278,6 +278,9 @@ COLUMN_DISPLAY_NAMES = {
     'prazo_cliente': 'Prazo do Cliente',
     'tipo_servico': 'Tipo de Serviço',
     'valor_servico': 'Valor do Serviço',
+    'metragem': 'Metragem',
+    'valor': 'Valor',
+    'total': 'Total',
 }
 
 TABLE_BASE_NAMES = {
@@ -432,7 +435,10 @@ def process_and_import(
         # Substitui NaN/None por None para inserção correta de NULLs no PostgreSQL
         df_to_insert = df_to_insert.astype(object).where(pd.notnull(df_to_insert), None)
 
-        # Todas as linhas do lote sao mantidas (sem descartar linhas sem OS ou Status)
+        # Descarta linhas de totais/resumo ou vazias que não possuam nenhum identificador operacional
+        id_cols = [c for c in ('ordem_servico', 'os', 'recurso', 'cdc_matricula', 'cdc', 'data') if c in df_to_insert.columns]
+        if id_cols:
+            df_to_insert = df_to_insert[df_to_insert[id_cols].notnull().any(axis=1)]
 
         # 5. Trata datas de referência para idempotência diária
         reference_date = None

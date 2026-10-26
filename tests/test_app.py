@@ -618,6 +618,46 @@ class AtlasSistemaTestCase(unittest.TestCase):
         execute("DELETE FROM brk_irregularidades WHERE os = '23-8066718-TEST'")
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'irregularidades_export.xlsx'")
 
+    def test_import_pavimentacao_comercial(self):
+        """Valida a importação de Pavimentação Comercial com cálculo de coluna gerada 'total' e descarte de totais do Excel."""
+        csv_pav = (
+            "Recurso;Data;CDC/Matricula;Ordem de Serviço;Prazo Cliente;Status da Atividade;Habilidade de Trabalho;metragem ;valor ;total\n"
+            "RMM02PSG074T;2026-03-16;123456;OS-PAV-TEST;2026-03-19 14:58:00;Concluído;Recomposição de Passeio;2.50;100.00;250.00\n"
+            ";;;;;;;;;250.00\n"  # Linha de resumo/total do Excel sem identificadores operacionais
+        )
+        file_storage = FileStorage(
+            stream=io.BytesIO(csv_pav.encode('utf-8')),
+            filename="teste_pav_comercial.csv",
+            content_type="text/csv"
+        )
+
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_pav_comer'")
+        user = query_one("SELECT id FROM atlas_usuarios WHERE is_admin = TRUE LIMIT 1")
+
+        res = process_and_import(
+            file_storage=file_storage,
+            filename="teste_pav_comercial.csv",
+            target_table="brk_pav_comer",
+            contrato_id=contrato['id'],
+            usuario_id=user['id'],
+            tipo_base='principal',
+            action='append',
+            date_col='data'
+        )
+
+        self.assertTrue(res['success'], f"Falha na importação: {res.get('message')}")
+        self.assertEqual(res['total_lines'], 1)  # Apenas a linha válida, descartando a linha de total
+
+        row = query_one("SELECT * FROM brk_pav_comer WHERE ordem_servico = 'OS-PAV-TEST'")
+        self.assertIsNotNone(row)
+        self.assertEqual(row['recurso'], 'RMM02PSG074T')
+        self.assertEqual(float(row['metragem']), 2.50)
+        self.assertEqual(float(row['valor']), 100.00)
+        self.assertEqual(float(row['total']), 250.00)
+
+        execute("DELETE FROM brk_pav_comer WHERE ordem_servico = 'OS-PAV-TEST'")
+        execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'teste_pav_comercial.csv'")
+
     def test_favicon_and_logo_available(self):
         resp_fav = self.client.get('/favicon.ico')
         self.assertEqual(resp_fav.status_code, 200)

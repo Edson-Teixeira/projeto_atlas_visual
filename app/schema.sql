@@ -142,3 +142,39 @@ CREATE TABLE IF NOT EXISTS brk_fiscalizacao (
 );
 CREATE INDEX IF NOT EXISTS idx_brk_fiscalizacao_os_status ON brk_fiscalizacao(ordem_servico, status_atividade);
 CREATE INDEX IF NOT EXISTS idx_brk_fiscalizacao_data ON brk_fiscalizacao(data);
+
+-- 10. Tabela Principal BRK Pavimentação Comercial
+CREATE TABLE IF NOT EXISTS brk_pav_comer (
+    id BIGSERIAL PRIMARY KEY,
+    recurso VARCHAR(255),
+    data DATE,
+    cdc_matricula VARCHAR(100),
+    ordem_servico VARCHAR(255),
+    prazo_cliente TIMESTAMP,
+    status_atividade VARCHAR(255),
+    habilidade_trabalho VARCHAR(255),
+    metragem NUMERIC(12, 4),
+    valor NUMERIC(12, 2),
+    total NUMERIC(14, 4) GENERATED ALWAYS AS (metragem * valor) STORED,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_brk_pav_comer_os_status ON brk_pav_comer(ordem_servico, status_atividade);
+CREATE INDEX IF NOT EXISTS idx_brk_pav_comer_data ON brk_pav_comer(data);
+
+-- 11. Tabela Principal BRK Pavimentação Operacional
+CREATE TABLE IF NOT EXISTS brk_pav_opera (
+    id BIGSERIAL PRIMARY KEY,
+    recurso VARCHAR(255),
+    data DATE,
+    cdc_matricula VARCHAR(100),
+    ordem_servico VARCHAR(255),
+    prazo_cliente TIMESTAMP,
+    status_atividade VARCHAR(255),
+    habilidade_trabalho VARCHAR(255),
+    metragem NUMERIC(12, 4),
+    valor NUMERIC(12, 2),
+    total NUMERIC(14, 4) GENERATED ALWAYS AS (metragem * valor) STORED,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_brk_pav_opera_os_status ON brk_pav_opera(ordem_servico, status_atividade);
+CREATE INDEX IF NOT EXISTS idx_brk_pav_opera_data ON brk_pav_opera(data);
