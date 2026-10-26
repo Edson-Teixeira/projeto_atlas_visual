@@ -217,32 +217,42 @@ class AtlasSistemaTestCase(unittest.TestCase):
         self.client.post('/login', data={'username': 'test_fiscalizacao', 'password': 'test_fisc123'})
         contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
 
-        novo_csv = (
-            "tipo_servico;valor_servico\n"
-            "Vistoria Especial;250,50\n"
-            "Troca Expressa;180.00\n"
-        )
-        data = {
-            'file': (io.BytesIO(novo_csv.encode('utf-8')), 'novos_servicos.csv')
-        }
-        resp = self.client.post(
-            f"/servicos/importar/{contrato['id']}",
-            data=data,
-            content_type='multipart/form-data',
-            follow_redirects=True
-        )
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn(b"Vistoria Especial", resp.data)
-        self.assertIn(b"Troca Expressa", resp.data)
+        # Salva o estado atual exato da tabela para restauração sem perdas
+        servicos_backup = query_all("SELECT tipo_servico, valor_servico FROM brk_fisca_valores")
 
-        # Confirma que foi gravado na tabela física brk_fisca_valores
-        row = query_one("SELECT valor_servico FROM brk_fisca_valores WHERE tipo_servico = 'Vistoria Especial'")
-        self.assertIsNotNone(row)
-        self.assertEqual(float(row['valor_servico']), 250.50)
+        try:
+            novo_csv = (
+                "tipo_servico;valor_servico\n"
+                "Vistoria Especial;250,50\n"
+                "Troca Expressa;180.00\n"
+            )
+            data = {
+                'file': (io.BytesIO(novo_csv.encode('utf-8')), 'novos_servicos.csv')
+            }
+            resp = self.client.post(
+                f"/servicos/importar/{contrato['id']}",
+                data=data,
+                content_type='multipart/form-data',
+                follow_redirects=True
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn(b"Vistoria Especial", resp.data)
+            self.assertIn(b"Troca Expressa", resp.data)
 
-        # Restaura os servicos padrao para fiscalizacao
-        from scripts.init_db import init_database
-        init_database()
+            # Confirma que foi gravado na tabela física brk_fisca_valores
+            row = query_one("SELECT valor_servico FROM brk_fisca_valores WHERE tipo_servico = 'Vistoria Especial'")
+            self.assertIsNotNone(row)
+            self.assertEqual(float(row['valor_servico']), 250.50)
+        finally:
+            # Restaura os serviços originais de forma 100% segura
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM brk_fisca_valores")
+                    if servicos_backup:
+                        from psycopg2.extras import execute_values
+                        records = [(r['tipo_servico'], float(r['valor_servico'])) for r in servicos_backup]
+                        execute_values(cur, "INSERT INTO brk_fisca_valores (tipo_servico, valor_servico) VALUES %s", records)
+            execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'novos_servicos.csv'")
 
     def test_admin_dashboard_renders_contracts_status_and_no_upload_box(self):
         self.client.post('/login', data={'username': 'test_admin', 'password': 'test_admin123'})

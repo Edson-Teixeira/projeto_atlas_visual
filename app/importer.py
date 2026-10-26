@@ -483,7 +483,11 @@ def process_and_import(
                             SET valor_servico = v.valor_servico
                             FROM brk_fisca_valores v
                             WHERE f.valor_servico IS NULL 
-                              AND (f.habilidade_trabalho = v.tipo_servico OR f.tipo_servico = v.tipo_servico);
+                              AND (
+                                  f.habilidade_trabalho = v.tipo_servico 
+                                  OR f.tipo_servico = v.tipo_servico
+                                  OR f.habilidade_trabalho ILIKE '%' || v.tipo_servico || '%'
+                              );
                         """)
                     except Exception:
                         pass

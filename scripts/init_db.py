@@ -61,12 +61,7 @@ def init_database():
             """, (codigo, nome, tab_prin, tab_sec, tab_ter, tab_val, col_data))
             print(f"Contrato criado: {nome} ({codigo})")
         else:
-            execute("""
-                UPDATE atlas_contratos 
-                SET tabela_principal = %s, tabela_secundaria = %s, tabela_terciaria = %s, tabela_valores = %s
-                WHERE codigo = %s
-            """, (tab_prin, tab_sec, tab_ter, tab_val, codigo))
-            print(f"Contrato atualizado: {nome} ({codigo})")
+            print(f"Contrato já configurado: {nome} ({codigo}) - preservando configurações.")
 
     # 2. Usuários padrão
     usuarios = [
@@ -96,47 +91,59 @@ def init_database():
             print(f"Usuário já existe: {username}")
 
     # 3. Serviços e Valores padrão para tabelas dedicadas: brk_fisca_valores e brk_hidro_valores
-    servicos_fisc = [
-        ('Corte', 112.90),
-        ('Fiscalização', 108.72),
-        ('Hidrômetro', 200.14),
-        ('Lacração', 55.00),
-        ('Outros', 45.00),
-        ('Recomposição', 75.00),
-        ('Regularização', 100.91),
-        ('Religação', 84.29),
-        ('Troca de Padrão', 135.50),
-        ('Troca Expressa', 180.00),
-        ('Vistoria Especial', 250.50),
-        ('Vistoria Técnica', 65.00)
-    ]
-    for s, v in servicos_fisc:
-        execute("""
-            INSERT INTO brk_fisca_valores (tipo_servico, valor_servico)
-            VALUES (%s, %s)
-            ON CONFLICT (tipo_servico) DO UPDATE SET valor_servico = EXCLUDED.valor_servico;
-        """, (s, v))
+    # REGRA DE PROTEÇÃO: Preserva 100% dos dados customizados existentes.
+    # Só insere valores padrão se a tabela estiver completamente vazia (primeira inicialização do sistema).
+    count_fisc = query_one("SELECT COUNT(*) as c FROM brk_fisca_valores")
+    if not count_fisc or count_fisc['c'] == 0:
+        servicos_fisc = [
+            ('Corte', 112.90),
+            ('Fiscalização', 108.72),
+            ('Hidrômetro', 200.14),
+            ('Lacração', 55.00),
+            ('Outros', 45.00),
+            ('Recomposição', 75.00),
+            ('Regularização', 100.91),
+            ('Religação', 84.29),
+            ('Troca de Padrão', 135.50),
+            ('Troca Expressa', 180.00),
+            ('Vistoria Especial', 250.50),
+            ('Vistoria Técnica', 65.00)
+        ]
+        for s, v in servicos_fisc:
+            execute("""
+                INSERT INTO brk_fisca_valores (tipo_servico, valor_servico)
+                VALUES (%s, %s)
+                ON CONFLICT (tipo_servico) DO NOTHING;
+            """, (s, v))
+        print("Tabela brk_fisca_valores populada com valores iniciais padrão.")
+    else:
+        print(f"Tabela brk_fisca_valores já possui {count_fisc['c']} registros. Preservando valores e customizações existentes.")
 
-    servicos_hidro = [
-        ('Aferição de Hidrômetro', 95.50),
-        ('Instalação de Hidrômetro', 185.00),
-        ('Lacração de Hidrômetro', 70.00),
-        ('Manutenção de Ramal', 120.00),
-        ('Outros Serviços Hidrometria', 50.00),
-        ('Padronização de Cavalete', 160.00),
-        ('Remanejamento de Cavalete', 175.00),
-        ('Substituição de Hidrômetro', 145.00),
-        ('Supressão a Pedido', 90.00),
-        ('Troca por Defeito / Parado', 140.00),
-        ('Troca por Idade / Obsoleto', 130.00),
-        ('Vistoria de Consumo', 80.00)
-    ]
-    for s, v in servicos_hidro:
-        execute("""
-            INSERT INTO brk_hidro_valores (tipo_servico, valor_servico)
-            VALUES (%s, %s)
-            ON CONFLICT (tipo_servico) DO UPDATE SET valor_servico = EXCLUDED.valor_servico;
-        """, (s, v))
+    count_hidro = query_one("SELECT COUNT(*) as c FROM brk_hidro_valores")
+    if not count_hidro or count_hidro['c'] == 0:
+        servicos_hidro = [
+            ('Aferição de Hidrômetro', 95.50),
+            ('Instalação de Hidrômetro', 185.00),
+            ('Lacração de Hidrômetro', 70.00),
+            ('Manutenção de Ramal', 120.00),
+            ('Outros Serviços Hidrometria', 50.00),
+            ('Padronização de Cavalete', 160.00),
+            ('Remanejamento de Cavalete', 175.00),
+            ('Substituição de Hidrômetro', 145.00),
+            ('Supressão a Pedido', 90.00),
+            ('Troca por Defeito / Parado', 140.00),
+            ('Troca por Idade / Obsoleto', 130.00),
+            ('Vistoria de Consumo', 80.00)
+        ]
+        for s, v in servicos_hidro:
+            execute("""
+                INSERT INTO brk_hidro_valores (tipo_servico, valor_servico)
+                VALUES (%s, %s)
+                ON CONFLICT (tipo_servico) DO NOTHING;
+            """, (s, v))
+        print("Tabela brk_hidro_valores populada com valores iniciais padrão.")
+    else:
+        print(f"Tabela brk_hidro_valores já possui {count_hidro['c']} registros. Preservando valores e customizações existentes.")
 
     print("\nInicialização concluída com sucesso!")
 
