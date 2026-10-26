@@ -44,12 +44,12 @@ def parse_date_value(val):
     
     # 1. Tenta formatos conhecidos explicitamente
     known_formats = [
-        '%m/%d/%y',    # 09/14/26 (MM/DD/YY - formato reportado em alguns sistemas)
-        '%m/%d/%Y',    # 09/14/2026
-        '%d/%m/%Y',    # 14/09/2026 (DD/MM/YYYY)
+        '%d/%m/%Y',    # 28/08/2026, 01/09/2026 (DD/MM/YYYY - Padrão Nacional)
         '%d/%m/%y',    # 22/10/26 (DD/MM/YY)
         '%Y-%m-%d',    # 2026-09-14 (ISO)
         '%Y/%m/%d',    # 2026/09/14
+        '%m/%d/%y',    # 09/14/26 (MM/DD/YY - fallback para datas onde mês vem primeiro e dia > 12)
+        '%m/%d/%Y',    # 09/14/2026
     ]
     for fmt in known_formats:
         try:
@@ -158,17 +158,27 @@ def parse_str_value(val):
 
 def read_uploaded_file(file_storage, filename: str) -> pd.DataFrame:
     """
-    Lê o arquivo enviado suportando CSV (vírgula, ponto-e-vírgula, tab, pipe, utf-8, latin1)
-    e planilhas Excel (.xlsx, .xls) com seleção do delimitador com maior número de colunas.
+    Lê o arquivo enviado suportando CSV/TSV (vírgula, ponto-e-vírgula, tab, pipe, utf-8, latin1)
+    e planilhas Excel (.xlsx, .xls) com detecção inteligente de formato e delimitador,
+    incluindo fallback automático para arquivos de texto delimitados salvos com extensão .xlsx/.xls.
     """
     ext = os.path.splitext(filename)[1].lower()
     content = file_storage.read()
-    
+    df = None
+
+    # 1. Se for extensão Excel (.xlsx, .xls), tenta ler primeiro como planilha binária
     if ext in ('.xlsx', '.xls'):
-        df = pd.read_excel(io.BytesIO(content))
-    elif ext == '.csv':
+        try:
+            df = pd.read_excel(io.BytesIO(content))
+        except Exception:
+            # Fallback resiliente: muitos sistemas corporativos exportam ou usuários salvam
+            # arquivos de texto delimitados (TSV/CSV) com extensão .xlsx/.xls para abrir direto no Excel.
+            df = None
+
+    # 2. Se for CSV/TSV/TXT ou se a leitura binária do Excel falhou (arquivo na verdade é delimitado)
+    if df is None:
         encodings = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252']
-        separators = [',', ';', '\t', '|']
+        separators = ['\t', ';', ',', '|']
         
         max_cols = 0
         best_enc = None
@@ -188,7 +198,6 @@ def read_uploaded_file(file_storage, filename: str) -> pd.DataFrame:
             if max_cols > 1 and best_enc in ('utf-8-sig', 'utf-8'):
                 break
 
-        df = None
         if best_enc and best_sep and max_cols > 1:
             try:
                 df = pd.read_csv(io.BytesIO(content), sep=best_sep, encoding=best_enc)
@@ -203,10 +212,15 @@ def read_uploaded_file(file_storage, filename: str) -> pd.DataFrame:
                 except Exception:
                     continue
 
-        if df is None:
-            raise ValueError("Não foi possível ler o arquivo CSV. Verifique a codificação e formato do arquivo.")
-    else:
-        raise ValueError(f"Formato de arquivo não suportado: '{ext}'. Envie arquivos .csv ou .xlsx.")
+    # 3. Fallback inverso: caso um arquivo .csv seja na verdade uma planilha Excel binária
+    if df is None:
+        try:
+            df = pd.read_excel(io.BytesIO(content))
+        except Exception:
+            pass
+
+    if df is None:
+        raise ValueError("Não foi possível ler o arquivo. Verifique a codificação e formato do arquivo.")
 
     return df
 

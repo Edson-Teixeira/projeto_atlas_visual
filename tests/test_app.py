@@ -567,6 +567,47 @@ class AtlasSistemaTestCase(unittest.TestCase):
         self.assertIn("padrão de colunas esperado para a Base de Irregularidades", res['message'])
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'clientes.csv';")
 
+    def test_import_irregularidades_tsv_with_xlsx_extension(self):
+        """Valida que arquivos de texto TSV salvos com extensão .xlsx (comum no Windows/Excel) são lidos e importados com sucesso."""
+        tsv_data = (
+            "CDC\tOS\tEquipe\tData\tIrregularidade\tNº TOI\tObservações\n"
+            "391777\t23-8066718-TEST\tRMM02PSF095T\t28/08/2026\tLacre Violado\t82705.0\tTeste Obs\n"
+        )
+        file_storage = FileStorage(
+            stream=io.BytesIO(tsv_data.encode('latin-1')),
+            filename="irregularidades_export.xlsx",
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+        contrato = query_one("SELECT id FROM atlas_contratos WHERE codigo = 'brk_fiscalizacao'")
+        user = query_one("SELECT id FROM atlas_usuarios WHERE username = 'test_fiscalizacao'")
+
+        res = process_and_import(
+            file_storage=file_storage,
+            filename="irregularidades_export.xlsx",
+            target_table="brk_irregularidades",
+            contrato_id=contrato['id'],
+            usuario_id=user['id'],
+            tipo_base='irregularidades',
+            action='append',
+            date_col='data'
+        )
+
+        self.assertTrue(res['success'], f"Falha na importação: {res.get('message')}")
+        self.assertEqual(res['total_lines'], 1)
+
+        row = query_one("SELECT * FROM brk_irregularidades WHERE os = '23-8066718-TEST'")
+        self.assertIsNotNone(row)
+        self.assertEqual(row['cdc'], 391777)
+        self.assertEqual(row['equipe'], 'RMM02PSF095T')
+        self.assertEqual(str(row['data']), '2026-08-28')
+        self.assertEqual(row['irregularidade'], 'Lacre Violado')
+        self.assertEqual(row['no_toi'], '82705')
+        self.assertEqual(row['observacoes'], 'Teste Obs')
+
+        execute("DELETE FROM brk_irregularidades WHERE os = '23-8066718-TEST'")
+        execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'irregularidades_export.xlsx'")
+
     def test_favicon_and_logo_available(self):
         resp_fav = self.client.get('/favicon.ico')
         self.assertEqual(resp_fav.status_code, 200)
