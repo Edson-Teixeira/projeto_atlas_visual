@@ -40,6 +40,14 @@ def parse_date_value(val):
     if isinstance(val, datetime):
         return val.date()
 
+    # Suporte a número serial de data do Excel (ex: 46127 -> 2026-04-15)
+    try:
+        num = float(val)
+        if 25000 <= num <= 90000:
+            return pd.to_datetime(num, unit='D', origin='1899-12-30').date()
+    except (ValueError, TypeError):
+        pass
+
     val_str = str(val).strip()
     
     # 1. Tenta formatos conhecidos explicitamente
@@ -48,6 +56,12 @@ def parse_date_value(val):
         '%d/%m/%y',    # 22/10/26 (DD/MM/YY)
         '%Y-%m-%d',    # 2026-09-14 (ISO)
         '%Y/%m/%d',    # 2026/09/14
+        '%d/%m/%Y %H:%M:%S', # 28/08/2026 14:30:00
+        '%d/%m/%y %H:%M:%S', # 22/10/26 14:30:00
+        '%Y-%m-%d %H:%M:%S', # 2026-09-14 14:30:00
+        '%d/%m/%Y %H:%M',    # 28/08/2026 14:30
+        '%d/%m/%y %H:%M',    # 22/10/26 14:30
+        '%Y-%m-%d %H:%M',    # 2026-09-14 14:30
         '%m/%d/%y',    # 09/14/26 (MM/DD/YY - fallback para datas onde mês vem primeiro e dia > 12)
         '%m/%d/%Y',    # 09/14/2026
     ]
@@ -226,7 +240,14 @@ def read_uploaded_file(file_storage, filename: str) -> pd.DataFrame:
 
 # Mapeamento expandido de sinônimos/aliases para máxima robustez
 SYNONYMS = {
-    'ordem_servico': ['ordem_de_servico', 'os', 'ordem', 'ordem_servico'],
+    'data': [
+        'data', 'data_da_atividade', 'data_atividade', 'data_de_execucao',
+        'data_execucao', 'data_de_atendimento', 'data_atendimento',
+        'dt_execucao', 'dt_atendimento', 'dt_atividade', 'data_do_servico',
+        'data_servico', 'dt_servico', 'data_exec', 'data_ref', 'data_referencia',
+        'dia'
+    ],
+    'ordem_servico': ['ordem_de_servico', 'os', 'ordem', 'ordem_servico', 'no_os', 'num_os'],
     'status_atividade': ['status_da_atividade', 'status', 'status_atividade'],
     'email': ['e_mail', 'correio_eletronico', 'email'],
     'intervalo_tempo': ['intervalo_de_tempo', 'intervalo', 'intervalo_tempo'],

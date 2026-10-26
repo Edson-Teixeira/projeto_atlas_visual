@@ -6,7 +6,8 @@ import pandas as pd
 from werkzeug.security import generate_password_hash
 from app import create_app
 from app.db import get_db, query_one, query_all, execute
-from app.importer import normalize_column_name, read_uploaded_file, process_and_import
+from datetime import date
+from app.importer import normalize_column_name, read_uploaded_file, process_and_import, parse_date_value
 from werkzeug.datastructures import FileStorage
 
 class AtlasSistemaTestCase(unittest.TestCase):
@@ -657,6 +658,19 @@ class AtlasSistemaTestCase(unittest.TestCase):
 
         execute("DELETE FROM brk_pav_comer WHERE ordem_servico = 'OS-PAV-TEST'")
         execute("DELETE FROM atlas_importacoes_log WHERE nome_arquivo = 'teste_pav_comercial.csv'")
+
+    def test_parse_date_value_excel_serial_and_formats(self):
+        # Serial do Excel (número de dias desde 1899-12-30)
+        self.assertEqual(parse_date_value(46127), date(2026, 4, 15))
+        self.assertEqual(parse_date_value('46127'), date(2026, 4, 15))
+        self.assertEqual(parse_date_value(46157), date(2026, 5, 15))
+        # Padrão brasileiro
+        self.assertEqual(parse_date_value('22/10/26'), date(2026, 10, 22))
+        self.assertEqual(parse_date_value('15/04/2026'), date(2026, 4, 15))
+        # ISO e Datetime com hora
+        self.assertEqual(parse_date_value('2026-04-15'), date(2026, 4, 15))
+        self.assertEqual(parse_date_value('2026-04-15 14:30:00'), date(2026, 4, 15))
+        self.assertEqual(parse_date_value('15/04/2026 14:30'), date(2026, 4, 15))
 
     def test_favicon_and_logo_available(self):
         resp_fav = self.client.get('/favicon.ico')
